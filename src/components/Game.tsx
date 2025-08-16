@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { GameState, GamePhase, Player, GameAction } from '../types/game'
+import { GameState, GamePhase, Player, GameAction, CHARACTER_NAMES } from '../types/game'
 import CharacterDistribution from './CharacterDistribution'
 import InitialActions from './InitialActions'
 import NightPhase from './NightPhase'
 import DayPhase from './DayPhase'
+import GameStatusModal from './GameStatusModal'
 import { resolveNightActions } from '../utils/actionResolver'
 import { checkVictoryConditions, applyLoveDeath, applyBloodBondDeath } from '../utils/gameUtils'
 
@@ -19,6 +20,7 @@ export default function Game({ gameState, onGameReset }: GameProps) {
     messages: string[]
     investigations: { [playerId: string]: any }
   }>({ deadPlayers: [], messages: [], investigations: {} })
+  const [showGameStatus, setShowGameStatus] = useState(false)
 
   const handleDistributionComplete = () => {
     setCurrentGameState(prev => ({
@@ -50,6 +52,15 @@ export default function Game({ gameState, onGameReset }: GameProps) {
     const victoryCheck = checkVictoryConditions({
       ...currentGameState,
       players: finalPlayers
+    })
+
+    console.log('Verificação de vitória:', {
+      hasWinner: victoryCheck.hasWinner,
+      reason: victoryCheck.reason,
+      winners: victoryCheck.winners,
+      alivePlayers: finalPlayers.filter(p => p.isAlive).length,
+      aliveWerewolves: finalPlayers.filter(p => p.character.includes('lobisomem') && p.isAlive).length,
+      aliveVampire: finalPlayers.find(p => p.character === 'vampiro' && p.isAlive)
     })
 
     setNightResults({
@@ -151,12 +162,22 @@ export default function Game({ gameState, onGameReset }: GameProps) {
             <p className="text-sm text-dark-300">
               Vivos: {currentGameState.players.filter(p => p.isAlive).length}
             </p>
-            <button
-              onClick={onGameReset}
-              className="btn-secondary mt-2 text-sm px-3 py-1"
-            >
-              🔄 Nova Partida
-            </button>
+            <div className="flex gap-2 mt-2">
+              {/* Botão da planilha para o mestre */}
+              <button
+                onClick={() => setShowGameStatus(true)}
+                className="btn-secondary text-sm px-3 py-1"
+                title="Abrir modal com situação geral do jogo"
+              >
+                📊 Planilha
+              </button>
+              <button
+                onClick={onGameReset}
+                className="btn-secondary text-sm px-3 py-1"
+              >
+                🔄 Nova Partida
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -258,6 +279,12 @@ export default function Game({ gameState, onGameReset }: GameProps) {
           </div>
         </div>
       )}
+
+      <GameStatusModal
+        isOpen={showGameStatus}
+        onClose={() => setShowGameStatus(false)}
+        gameState={currentGameState}
+      />
     </div>
   )
 }

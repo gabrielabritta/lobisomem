@@ -47,6 +47,8 @@ export default function NightPhase({ players, nightNumber, onNightComplete }: Ni
             actionCharacters.includes(player.originalCharacter))
   })
 
+  console.log('Jogadores com ações:', actionPlayers.map(p => ({ name: p.name, character: p.character })))
+
   const addAction = (playerId: string, type: ActionType, targetId?: string, data?: any) => {
     const newAction: GameAction = {
       id: `action_${Date.now()}_${Math.random()}`,
@@ -57,6 +59,15 @@ export default function NightPhase({ players, nightNumber, onNightComplete }: Ni
       phase: 'night' as any,
       night: nightNumber
     }
+
+    console.log('Adicionando ação:', {
+      playerId,
+      type,
+      targetId,
+      data,
+      night: nightNumber
+    })
+
     setActions(prev => [...prev, newAction])
   }
 
@@ -127,8 +138,32 @@ export default function NightPhase({ players, nightNumber, onNightComplete }: Ni
   const handlePlayerAction = (actionType: ActionType) => {
     const currentPlayer = actionPlayers[currentPlayerIndex]
 
+    console.log('Processando ação do jogador:', {
+      name: currentPlayer.name,
+      character: currentPlayer.character,
+      actionType,
+      targetId: selectedTarget
+    })
+
     if (selectedTarget) {
       addAction(currentPlayer.id, actionType, selectedTarget)
+
+      // Mostrar resultado imediato para o vidente
+      if (actionType === ActionType.INVESTIGATE &&
+          (currentPlayer.character === CharacterClass.VIDENTE ||
+           (currentPlayer.character === CharacterClass.OCCULT && currentPlayer.originalCharacter === CharacterClass.VIDENTE))) {
+        const target = alivePlayers.find(p => p.id === selectedTarget)
+        if (target) {
+          const isGood = [
+            CharacterClass.ALDEAO, CharacterClass.MEDIUM, CharacterClass.VIDENTE,
+            CharacterClass.CUPIDO, CharacterClass.TALISMA, CharacterClass.BRUXA,
+            CharacterClass.BALA_DE_PRATA, CharacterClass.GUARDIAO, CharacterClass.HEMOMANTE,
+            CharacterClass.HEROI
+          ].includes(target.character)
+
+          alert(`🔍 Resultado da investigação:\n${target.name} é ${isGood ? 'BOM' : 'MAU'}`)
+        }
+      }
     }
 
     setSelectedTarget('')
@@ -152,6 +187,15 @@ export default function NightPhase({ players, nightNumber, onNightComplete }: Ni
   }
 
   const handleComplete = () => {
+    console.log('Finalizando fase noturna:', {
+      totalActions: actions.length,
+      actions: actions.map(a => ({
+        playerId: a.playerId,
+        type: a.type,
+        targetId: a.targetId
+      }))
+    })
+
     onNightComplete(actions, players)
   }
 
@@ -280,6 +324,15 @@ export default function NightPhase({ players, nightNumber, onNightComplete }: Ni
               <div className="text-sm text-primary-400">
                 Jogador {currentPlayerIndex + 1} de {actionPlayers.length}
               </div>
+
+              {/* Mostrar informações de debug para o vampiro */}
+              {actionPlayers[currentPlayerIndex].character === CharacterClass.VAMPIRO && (
+                <div className="bg-red-900/30 border border-red-700 rounded-lg p-3 mt-2">
+                  <p className="text-sm text-red-300">
+                    🧛‍♂️ Você é o Vampiro! Escolha alguém para matar esta noite.
+                  </p>
+                </div>
+              )}
             </div>
 
             {actionPlayers[currentPlayerIndex].isSilenced && (
@@ -369,6 +422,25 @@ export default function NightPhase({ players, nightNumber, onNightComplete }: Ni
               Todas as ações noturnas foram registradas.
               Prepare-se para o amanhecer...
             </p>
+
+            {/* Mostrar resumo das ações para debug */}
+            {actions.length > 0 && (
+              <div className="bg-dark-700 rounded-lg p-4 text-left">
+                <h4 className="font-semibold mb-2">📋 Resumo das Ações:</h4>
+                <div className="space-y-1 text-sm">
+                  {actions.map((action, index) => {
+                    const player = players.find(p => p.id === action.playerId)
+                    const target = action.targetId ? players.find(p => p.id === action.targetId) : null
+                    return (
+                      <div key={index} className="text-dark-300">
+                        • {player?.name} ({action.type}) → {target?.name || 'Nenhum'}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
             <button
               onClick={handleComplete}
               className="btn-primary"

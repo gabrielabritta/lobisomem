@@ -66,7 +66,7 @@ export function distributeCharacters(
   const remainingSlots = config.numberOfPlayers - selectedClasses.length;
   const remainingClasses = nonWerewolfClasses.filter(cls =>
     !selectedClasses.includes(cls) ||
-    selectedClasses.filter(sc => sc === cls).length < 2 // Permitir duplicatas limitadas
+    (cls === CharacterClass.ALDEAO && selectedClasses.filter(sc => sc === cls).length < 2) // Aldeões podem ter até 2
   );
 
   for (let i = 0; i < remainingSlots; i++) {
@@ -74,7 +74,8 @@ export function distributeCharacters(
       const randomIndex = Math.floor(Math.random() * remainingClasses.length);
       selectedClasses.push(remainingClasses[randomIndex]);
     } else {
-      selectedClasses.push(CharacterClass.ALDEAO); // Fallback
+      // Se não há mais classes disponíveis, usar aldeão
+      selectedClasses.push(CharacterClass.ALDEAO);
     }
   }
 
@@ -118,8 +119,16 @@ export function checkVictoryConditions(gameState: GameState): {
   const aliveZombie = alivePlayers.find(p => p.character === CharacterClass.ZUMBI);
   const cupidPlayer = gameState.players.find(p => p.character === CharacterClass.CUPIDO);
 
+  console.log('Verificando condições de vitória:', {
+    totalAlive: alivePlayers.length,
+    aliveWerewolves: aliveWerewolves.length,
+    aliveVampire: aliveVampire ? aliveVampire.name : null,
+    aliveZombie: aliveZombie ? aliveZombie.name : null
+  })
+
   // Verificar vitória do Vampiro (sobrou apenas ele e mais um)
   if (aliveVampire && alivePlayers.length === 2) {
+    console.log('Vampiro venceu!', { aliveVampire: aliveVampire.name, alivePlayers: alivePlayers.length })
     return {
       hasWinner: true,
       winners: [aliveVampire.id],

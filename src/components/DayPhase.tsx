@@ -17,7 +17,9 @@ type DayStep =
   | 'deaths_announcement'
   | 'discussion'
   | 'mayor_voting'
+  | 'mayor_result'
   | 'expulsion_voting'
+  | 'expulsion_result'
   | 'complete'
 
 export default function DayPhase({
@@ -37,10 +39,11 @@ export default function DayPhase({
   const [newMayorId, setNewMayorId] = useState<string>(mayorId || '')
   const [showVotes, setShowVotes] = useState(!config.mayorVotingAnonymous)
   const [isExpulsionVoting, setIsExpulsionVoting] = useState(false)
+  const [votingResult, setVotingResult] = useState<{ winner: string | null, tied: boolean, tiedPlayers: string[] } | null>(null)
 
   const alivePlayers = players.filter(p => p.isAlive)
   const currentVoter = alivePlayers[currentVoterIndex]
-  const needsMayor = !mayorId
+  const needsMayor = !mayorId || !alivePlayers.find(p => p.id === mayorId)
   const currentMayor = players.find(p => p.id === (newMayorId || mayorId))
 
   // Timer para discussão
@@ -51,9 +54,14 @@ export default function DayPhase({
       }, 1000)
       return () => clearTimeout(timer)
     } else if (currentStep === 'discussion' && discussionTimeLeft === 0) {
-      setCurrentStep(needsMayor ? 'mayor_voting' : 'expulsion_voting')
+      // Verificar se precisa de votação para prefeito
+      if (needsMayor && dayNumber === 1) {
+        setCurrentStep('mayor_voting')
+      } else {
+        setCurrentStep('expulsion_voting')
+      }
     }
-  }, [currentStep, discussionTimeLeft, needsMayor])
+  }, [currentStep, discussionTimeLeft, needsMayor, dayNumber])
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -84,16 +92,26 @@ export default function DayPhase({
         if (result.winner) {
           setNewMayorId(result.winner)
         }
-        setCurrentStep('expulsion_voting')
-        setCurrentVoterIndex(0)
-        setVotes({})
-        setIsExpulsionVoting(true)
-        setShowVotes(!config.expulsionVotingAnonymous)
+        setVotingResult(result)
+        setCurrentStep('mayor_result')
       } else {
         // Votação de expulsão
-        onDayComplete(result.winner || undefined, newMayorId, players)
+        setVotingResult(result)
+        setCurrentStep('expulsion_result')
       }
     }
+  }
+
+  const handleMayorResultContinue = () => {
+    setCurrentStep('expulsion_voting')
+    setCurrentVoterIndex(0)
+    setVotes({})
+    setIsExpulsionVoting(true)
+    setShowVotes(!config.expulsionVotingAnonymous)
+  }
+
+  const handleExpulsionResultContinue = () => {
+    onDayComplete(votingResult?.winner || undefined, newMayorId, players)
   }
 
   const getPlayerInvestigationResult = (playerId: string) => {
@@ -106,6 +124,24 @@ export default function DayPhase({
       return `👻 Você viu a classe de ${investigation.target}: ${CHARACTER_NAMES[investigation.result as CharacterClass]}`
     }
     return null
+  }
+
+  const getVotingResultText = () => {
+    if (!votingResult) return ''
+
+    if (votingResult.tied) {
+      return `Empate entre: ${votingResult.tiedPlayers.map(id => {
+        const player = players.find(p => p.id === id)
+        return player ? player.name : 'Desconhecido'
+      }).join(', ')}. Sorteio: ${(() => {
+        const winner = players.find(p => p.id === votingResult.winner)
+        return winner ? winner.name : 'Desconhecido'
+      })()}`
+    } else if (votingResult.winner) {
+      const winner = players.find(p => p.id === votingResult.winner)
+      return winner ? winner.name : 'Desconhecido'
+    }
+    return 'Nenhum vencedor'
   }
 
   return (
@@ -130,7 +166,8 @@ export default function DayPhase({
                       const deadPlayer = players.find(p => p.id === deadId)
                       return deadPlayer ? (
                         <div key={deadId} className="text-lg mb-2">
-                          ⚰️ <strong>{deadPlayer.name}</strong> - {CHARACTER_NAMES[deadPlayer.character]}
+                          ⚰️ <strong>{deadPlayer.name}</strong>
+                          {/* Não mostrar a classe de quem morreu */}
                         </div>
                       ) : null
                     })}
@@ -223,13 +260,98 @@ export default function DayPhase({
           </div>
         )}
 
-        {(currentStep === 'mayor_voting' || currentStep === 'expulsion_voting') && (
+        {currentStep === 'mayor_voting' && needsMayor && dayNumber === 1 && (
           <div className="space-y-6">
             <div className="text-center">
-              <h3 className="text-xl font-semibold mb-2">
-                {isExpulsionVoting ? '🗳️ Votação de Expulsão' : '👑 Votação para Prefeito'}
-              </h3>
-              {isExpulsionVoting && currentMayor && (
+              <h3 className="text-xl font-semibold mb-2">👑 Votação para Prefeito</h3>
+              <p className="text-dark-300 mb-4">
+                Vez de: <span className="text-primary-400 font-semibold">{currentVoter.name}</span>
+              </p>
+              <div className="text-sm text-dark-400">
+                Votação {currentVoterIndex + 1} de {alivePlayers.length}
+              </div>
+            </div>
+
+            {/* Mostrar votos até agora (se não for anônimo) */}
+            {showVotes && Object.keys(votes).length > 0 && (
+              <div className="bg-dark-700 rounded-lg p-4">
+                <h4 className="font-semibold mb-2">📊 Votos até agora:</h4>
+                <div className="grid md:grid-cols-2 gap-2 text-sm">
+                  {Object.entries(votes).map(([voterId, targetId]) => {
+                    const voter = players.find(p => p.id === voterId)
+                    const target = players.find(p => p.id === targetId)
+                    return (
+                      <div key={voterId} className="text-dark-300">
+                        {voter?.name} → {target?.name}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {alivePlayers.map(player => (
+                <button
+                  key={player.id}
+                  onClick={() => handleVote(player.id)}
+                  className="p-4 rounded-lg border bg-dark-700 border-dark-600 hover:bg-dark-600 transition-all"
+                >
+                  <div className="font-medium">{player.name}</div>
+                  <div className="text-sm text-dark-300 mt-1">
+                    Eleger Prefeito
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {currentStep === 'mayor_result' && (
+          <div className="space-y-6 text-center">
+            <div className="text-6xl">👑</div>
+            <h3 className="text-2xl font-bold">Resultado da Votação para Prefeito</h3>
+            <div className="bg-primary-900/30 border border-primary-700 rounded-lg p-6">
+              <p className="text-lg">
+                <strong>Prefeito Eleito:</strong> {getVotingResultText()}
+              </p>
+              {votingResult?.tied && (
+                <p className="text-sm text-primary-300 mt-2">
+                  Houve um empate e o vencedor foi sorteado.
+                </p>
+              )}
+            </div>
+
+            {/* Mostrar detalhes da votação */}
+            <div className="bg-dark-700 rounded-lg p-4">
+              <h4 className="font-semibold mb-3">📊 Detalhes da Votação:</h4>
+              <div className="grid md:grid-cols-2 gap-2 text-sm">
+                {Object.entries(votes).map(([voterId, targetId]) => {
+                  const voter = players.find(p => p.id === voterId)
+                  const target = players.find(p => p.id === targetId)
+                  return (
+                    <div key={voterId} className="text-dark-300">
+                      {voter?.name} → {target?.name}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            <button
+              onClick={handleMayorResultContinue}
+              className="btn-primary"
+            >
+              Continuar para Votação de Expulsão
+            </button>
+          </div>
+        )}
+
+        {currentStep === 'expulsion_voting' && (
+          <div className="space-y-6">
+            <div className="text-center">
+              <h3 className="text-xl font-semibold mb-2">🗳️ Votação de Expulsão</h3>
+              {currentMayor && (
                 <p className="text-dark-300 mb-4">
                   Prefeito: <span className="text-primary-400 font-semibold">{currentMayor.name}</span>
                 </p>
@@ -249,10 +371,10 @@ export default function DayPhase({
                 <div className="grid md:grid-cols-2 gap-2 text-sm">
                   {Object.entries(votes).map(([voterId, targetId]) => {
                     const voter = players.find(p => p.id === voterId)
-                    const target = players.find(p => p.id === targetId)
+                    const target = targetId === 'no_expulsion' ? 'Não expulsar' : players.find(p => p.id === targetId)?.name
                     return (
                       <div key={voterId} className="text-dark-300">
-                        {voter?.name} → {target?.name || 'Não expulsar'}
+                        {voter?.name} → {target}
                       </div>
                     )
                   })}
@@ -261,23 +383,21 @@ export default function DayPhase({
             )}
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {alivePlayers
-                .filter(p => !isExpulsionVoting || p.id !== currentVoter.id) // Não pode votar em si mesmo na expulsão
-                .map(player => (
-                  <button
-                    key={player.id}
-                    onClick={() => handleVote(player.id)}
-                    className="p-4 rounded-lg border bg-dark-700 border-dark-600 hover:bg-dark-600 transition-all"
-                  >
-                    <div className="font-medium">{player.name}</div>
-                    <div className="text-sm text-dark-300 mt-1">
-                      {isExpulsionVoting ? 'Expulsar' : 'Eleger Prefeito'}
-                    </div>
-                  </button>
-                ))}
+              {alivePlayers.map(player => (
+                <button
+                  key={player.id}
+                  onClick={() => handleVote(player.id)}
+                  className="p-4 rounded-lg border bg-dark-700 border-dark-600 hover:bg-dark-600 transition-all"
+                >
+                  <div className="font-medium">{player.name}</div>
+                  <div className="text-sm text-dark-300 mt-1">
+                    Expulsar
+                  </div>
+                </button>
+              ))}
 
               {/* Opção de não expulsar (se permitido) */}
-              {isExpulsionVoting && config.allowNoExpulsionVote && (
+              {config.allowNoExpulsionVote && (
                 <button
                   onClick={() => handleVote('no_expulsion')}
                   className="p-4 rounded-lg border bg-green-700 border-green-600 hover:bg-green-600 transition-all"
@@ -289,6 +409,52 @@ export default function DayPhase({
                 </button>
               )}
             </div>
+          </div>
+        )}
+
+        {currentStep === 'expulsion_result' && (
+          <div className="space-y-6 text-center">
+            <div className="text-6xl">🗳️</div>
+            <h3 className="text-2xl font-bold">Resultado da Votação de Expulsão</h3>
+            <div className="bg-red-900/30 border border-red-700 rounded-lg p-6">
+              {votingResult?.winner ? (
+                <p className="text-lg">
+                  <strong>Jogador Expulso:</strong> {getVotingResultText()}
+                </p>
+              ) : (
+                <p className="text-lg text-green-400">
+                  <strong>Ninguém foi expulso</strong>
+                </p>
+              )}
+              {votingResult?.tied && (
+                <p className="text-sm text-red-300 mt-2">
+                  Houve um empate e o vencedor foi sorteado.
+                </p>
+              )}
+            </div>
+
+            {/* Mostrar detalhes da votação */}
+            <div className="bg-dark-700 rounded-lg p-4">
+              <h4 className="font-semibold mb-3">📊 Detalhes da Votação:</h4>
+              <div className="grid md:grid-cols-2 gap-2 text-sm">
+                {Object.entries(votes).map(([voterId, targetId]) => {
+                  const voter = players.find(p => p.id === voterId)
+                  const target = targetId === 'no_expulsion' ? 'Não expulsar' : players.find(p => p.id === targetId)?.name
+                  return (
+                    <div key={voterId} className="text-dark-300">
+                      {voter?.name} → {target}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            <button
+              onClick={handleExpulsionResultContinue}
+              className="btn-primary"
+            >
+              Continuar para a Próxima Noite
+            </button>
           </div>
         )}
 

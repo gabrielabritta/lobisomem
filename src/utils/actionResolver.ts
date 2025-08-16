@@ -19,6 +19,12 @@ export function resolveNightActions(players: Player[], actions: GameAction[]): A
   const messages: string[] = []
   const investigations: { [playerId: string]: any } = {}
 
+  console.log('Resolvendo ações noturnas:', {
+    totalPlayers: players.length,
+    alivePlayers: players.filter(p => p.isAlive).length,
+    actions: actions.length
+  })
+
   // Separar ações por tipo para processar na ordem correta
   const protections = actions.filter(a => a.type === ActionType.PROTECT)
   const heals = actions.filter(a => a.type === ActionType.HEAL)
@@ -28,6 +34,17 @@ export function resolveNightActions(players: Player[], actions: GameAction[]): A
   const silences = actions.filter(a => a.type === ActionType.SILENCE)
   const investigations_actions = actions.filter(a => a.type === ActionType.INVESTIGATE)
   const bloodBonds = actions.filter(a => a.type === ActionType.BLOOD_BOND)
+
+  console.log('Ações por tipo:', {
+    protections: protections.length,
+    heals: heals.length,
+    kills: kills.length,
+    poisons: poisons.length,
+    infections: infections.length,
+    silences: silences.length,
+    investigations: investigations_actions.length,
+    bloodBonds: bloodBonds.length
+  })
 
   // 1. Aplicar proteções
   const protectedPlayers = new Set<string>()
@@ -228,6 +245,14 @@ export function resolveNightActions(players: Player[], actions: GameAction[]): A
         }
       }
     }
+  })
+
+  console.log('Resultado das ações noturnas:', {
+    totalPlayers: players.length,
+    alivePlayers: players.filter(p => p.isAlive).length,
+    deadPlayers: deadPlayers.length,
+    messages: messages.length,
+    investigations: Object.keys(investigations).length
   })
 
   return {

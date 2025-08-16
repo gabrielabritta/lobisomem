@@ -35,7 +35,7 @@ Lobisomem é um jogo onde os jogadores assumem papéis secretos - alguns são in
 ## 🚀 Como Rodar o Projeto
 
 ### Pré-requisitos
-- Node.js 18+ 
+- Node.js 18+
 - pnpm (recomendado) ou npm
 
 ### Instalação e Execução

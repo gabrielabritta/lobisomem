@@ -60,6 +60,12 @@ export default function GameSetup({ onGameStart }: GameSetupProps) {
       return
     }
 
+    // Verificar se há classes suficientes
+    if (config.allowedClasses.length < config.numberOfPlayers) {
+      alert('Não há classes suficientes para todos os jogadores!')
+      return
+    }
+
     const players = distributeCharacters(playerNames, config)
 
     const gameState: GameState = {
@@ -182,7 +188,7 @@ export default function GameSetup({ onGameStart }: GameSetupProps) {
         {/* Classes Disponíveis */}
         <div className="mb-6">
           <h3 className="text-lg font-semibold mb-3">Classes Disponíveis</h3>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-60 overflow-y-auto">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {allCharacterClasses.map((characterClass) => (
               <div
                 key={characterClass}

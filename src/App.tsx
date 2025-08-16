@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import GameSetup from './components/GameSetup'
 import Game from './components/Game'
+import CharacterInfo from './components/CharacterInfo'
 import { GameState, GamePhase } from './types/game'
 
 function App() {
   const [gameState, setGameState] = useState<GameState | null>(null)
+  const [showCharacterInfo, setShowCharacterInfo] = useState(false)
 
   const handleGameStart = (newGameState: GameState) => {
     setGameState(newGameState)
@@ -24,12 +26,29 @@ function App() {
           <p className="text-dark-300 text-sm sm:text-base md:text-lg">
             Jogo de dedução social inspirado em Town of Salem
           </p>
+
+          {/* Botão para ver todas as classes */}
+          {!gameState && (
+            <div className="mt-6">
+              <button
+                onClick={() => setShowCharacterInfo(true)}
+                className="btn-secondary text-base px-6 py-3"
+              >
+                📚 Ver Todas as Classes
+              </button>
+            </div>
+          )}
         </header>
 
         {!gameState || gameState.currentPhase === GamePhase.SETUP ? (
           <GameSetup onGameStart={handleGameStart} />
         ) : (
           <Game gameState={gameState} onGameReset={handleGameReset} />
+        )}
+
+        {/* Modal de informações das classes */}
+        {showCharacterInfo && (
+          <CharacterInfo onClose={() => setShowCharacterInfo(false)} />
         )}
       </div>
     </div>
