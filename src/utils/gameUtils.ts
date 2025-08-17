@@ -290,6 +290,75 @@ export function processVotes(votes: { [playerId: string]: string }): {
   }
 }
 
+// Chaves para o localStorage
+const CONFIG_CACHE_KEY = 'lobisomem_game_config';
+const PLAYER_NAMES_CACHE_KEY = 'lobisomem_player_names';
+
+// Função para salvar configurações no cache
+export function saveConfigToCache(config: GameConfig): void {
+  try {
+    localStorage.setItem(CONFIG_CACHE_KEY, JSON.stringify(config));
+  } catch (error) {
+    console.warn('Erro ao salvar configurações no cache:', error);
+  }
+}
+
+// Função para salvar nomes dos jogadores no cache
+export function savePlayerNamesToCache(playerNames: string[]): void {
+  try {
+    localStorage.setItem(PLAYER_NAMES_CACHE_KEY, JSON.stringify(playerNames));
+  } catch (error) {
+    console.warn('Erro ao salvar nomes dos jogadores no cache:', error);
+  }
+}
+
+// Função para carregar configurações do cache
+export function loadConfigFromCache(): GameConfig | null {
+  try {
+    const cached = localStorage.getItem(CONFIG_CACHE_KEY);
+    if (cached) {
+      const config = JSON.parse(cached) as GameConfig;
+      // Validar se a configuração tem todos os campos necessários
+      const defaultConfig = createDefaultConfig();
+      return {
+        ...defaultConfig,
+        ...config,
+        // Garantir que allowedClasses seja um array válido
+        allowedClasses: Array.isArray(config.allowedClasses) ? config.allowedClasses : defaultConfig.allowedClasses
+      };
+    }
+  } catch (error) {
+    console.warn('Erro ao carregar configurações do cache:', error);
+  }
+  return null;
+}
+
+// Função para carregar nomes dos jogadores do cache
+export function loadPlayerNamesFromCache(): string[] | null {
+  try {
+    const cached = localStorage.getItem(PLAYER_NAMES_CACHE_KEY);
+    if (cached) {
+      const playerNames = JSON.parse(cached) as string[];
+      if (Array.isArray(playerNames)) {
+        return playerNames;
+      }
+    }
+  } catch (error) {
+    console.warn('Erro ao carregar nomes dos jogadores do cache:', error);
+  }
+  return null;
+}
+
+// Função para limpar cache
+export function clearConfigCache(): void {
+  try {
+    localStorage.removeItem(CONFIG_CACHE_KEY);
+    localStorage.removeItem(PLAYER_NAMES_CACHE_KEY);
+  } catch (error) {
+    console.warn('Erro ao limpar cache:', error);
+  }
+}
+
 // Função para gerar configuração padrão
 export function createDefaultConfig(): GameConfig {
   return {

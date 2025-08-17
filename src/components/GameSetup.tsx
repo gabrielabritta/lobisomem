@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type {
   GameConfig,
   GameState
@@ -9,18 +9,65 @@ import {
   CHARACTER_NAMES,
   CHARACTER_DESCRIPTIONS
 } from '../types/game'
-import { createDefaultConfig, distributeCharacters } from '../utils/gameUtils'
+import { 
+  createDefaultConfig, 
+  distributeCharacters,
+  loadConfigFromCache,
+  loadPlayerNamesFromCache,
+  saveConfigToCache,
+  savePlayerNamesToCache,
+  clearConfigCache
+} from '../utils/gameUtils'
 
 interface GameSetupProps {
   onGameStart: (gameState: GameState) => void
 }
 
 export default function GameSetup({ onGameStart }: GameSetupProps) {
-  const [config, setConfig] = useState<GameConfig>(createDefaultConfig())
+  // Função para inicializar configurações com cache
+  const initializeConfig = (): GameConfig => {
+    const cachedConfig = loadConfigFromCache()
+    return cachedConfig || createDefaultConfig()
+  }
+
+  // Função para inicializar nomes dos jogadores com cache
+  const initializePlayerNames = (numberOfPlayers: number): string[] => {
+    const cachedNames = loadPlayerNamesFromCache()
+    if (cachedNames && cachedNames.length >= numberOfPlayers) {
+      return cachedNames.slice(0, numberOfPlayers)
+    }
+    
+    // Se não há cache ou não há nomes suficientes, gerar nomes padrão
+    const names = Array.from({ length: numberOfPlayers }, (_, i) => `Jogador ${i + 1}`)
+    
+    // Se há alguns nomes em cache, usar eles primeiro
+    if (cachedNames) {
+      for (let i = 0; i < Math.min(cachedNames.length, numberOfPlayers); i++) {
+        if (cachedNames[i] && cachedNames[i].trim()) {
+          names[i] = cachedNames[i]
+        }
+      }
+    }
+    
+    return names
+  }
+
+  const initialConfig = initializeConfig()
+  const [config, setConfig] = useState<GameConfig>(initialConfig)
   const [playerNames, setPlayerNames] = useState<string[]>(
-    Array.from({ length: 8 }, (_, i) => `Jogador ${i + 1}`)
+    initializePlayerNames(initialConfig.numberOfPlayers)
   )
   const [showAdvanced, setShowAdvanced] = useState(false)
+
+  // Salvar configurações no cache quando mudarem
+  useEffect(() => {
+    saveConfigToCache(config)
+  }, [config])
+
+  // Salvar nomes dos jogadores no cache quando mudarem
+  useEffect(() => {
+    savePlayerNamesToCache(playerNames)
+  }, [playerNames])
 
   const handlePlayerCountChange = (count: number) => {
     setConfig(prev => ({ ...prev, numberOfPlayers: count }))
@@ -73,6 +120,15 @@ export default function GameSetup({ onGameStart }: GameSetupProps) {
         }
       }
     })
+  }
+
+  const handleResetConfig = () => {
+    if (confirm('Tem certeza que deseja resetar todas as configurações para os valores padrão?')) {
+      clearConfigCache()
+      const defaultConfig = createDefaultConfig()
+      setConfig(defaultConfig)
+      setPlayerNames(initializePlayerNames(defaultConfig.numberOfPlayers))
+    }
   }
 
   const handleStartGame = () => {
@@ -233,12 +289,20 @@ export default function GameSetup({ onGameStart }: GameSetupProps) {
 
         {/* Configurações Avançadas */}
         <div className="mb-6">
-          <button
-            onClick={() => setShowAdvanced(!showAdvanced)}
-            className="btn-secondary mb-4"
-          >
-            {showAdvanced ? 'Ocultar' : 'Mostrar'} Configurações Avançadas
-          </button>
+          <div className="flex gap-3 mb-4">
+            <button
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="btn-secondary"
+            >
+              {showAdvanced ? 'Ocultar' : 'Mostrar'} Configurações Avançadas
+            </button>
+            <button
+              onClick={handleResetConfig}
+              className="btn-secondary text-red-400 hover:text-red-300 hover:bg-red-900/20"
+            >
+              🔄 Resetar Configurações
+            </button>
+          </div>
 
           {showAdvanced && (
             <div className="grid md:grid-cols-2 gap-4 p-4 bg-dark-700 rounded-lg">
