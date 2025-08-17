@@ -34,6 +34,7 @@ export enum Team {
 export enum GamePhase {
   SETUP = 'setup',
   CHARACTER_DISTRIBUTION = 'character_distribution',
+  MAYOR_VOTING = 'mayor_voting',
   NIGHT = 'night',
   DAY = 'day',
   VOTING = 'voting',
@@ -111,6 +112,8 @@ export interface GameState {
   winningTeam?: Team;
   isGameEnded: boolean;
   discussionEndTime?: Date;
+  witchPotions?: WitchPotions; // Controle das poções da bruxa
+  usedAbilities?: { [playerId: string]: string[] }; // Controle de habilidades usadas por jogador
 }
 
 // Tipos para ações específicas dos personagens

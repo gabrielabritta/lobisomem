@@ -1,7 +1,9 @@
 import { useState } from 'react'
-import {
+import type {
   GameConfig,
-  GameState,
+  GameState
+} from '../types/game'
+import {
   GamePhase,
   CharacterClass,
   CHARACTER_NAMES,
@@ -46,12 +48,31 @@ export default function GameSetup({ onGameStart }: GameSetupProps) {
   }
 
   const handleClassToggle = (characterClass: CharacterClass) => {
-    setConfig(prev => ({
-      ...prev,
-      allowedClasses: prev.allowedClasses.includes(characterClass)
-        ? prev.allowedClasses.filter(c => c !== characterClass)
-        : [...prev.allowedClasses, characterClass]
-    }))
+    setConfig(prev => {
+      const isWerewolfClass = [CharacterClass.LOBISOMEM, CharacterClass.LOBISOMEM_VOODOO, CharacterClass.LOBISOMEM_MORDACA].includes(characterClass)
+      const currentWerewolfClasses = prev.allowedClasses.filter(c => 
+        [CharacterClass.LOBISOMEM, CharacterClass.LOBISOMEM_VOODOO, CharacterClass.LOBISOMEM_MORDACA].includes(c)
+      )
+      
+      if (prev.allowedClasses.includes(characterClass)) {
+        // Tentando remover uma classe
+        if (isWerewolfClass && currentWerewolfClasses.length === 1) {
+          // Não permitir remover a última classe de lobisomem
+          alert('Pelo menos uma classe de lobisomem deve estar habilitada!')
+          return prev
+        }
+        return {
+          ...prev,
+          allowedClasses: prev.allowedClasses.filter(c => c !== characterClass)
+        }
+      } else {
+        // Adicionando uma classe
+        return {
+          ...prev,
+          allowedClasses: [...prev.allowedClasses, characterClass]
+        }
+      }
+    })
   }
 
   const handleStartGame = () => {

@@ -1,7 +1,9 @@
 import { useState } from 'react'
-import { GameState, GamePhase, Player, GameAction, CHARACTER_NAMES } from '../types/game'
+import type { GameState, Player, GameAction } from '../types/game'
+import { GamePhase, CHARACTER_NAMES } from '../types/game'
 import CharacterDistribution from './CharacterDistribution'
 import InitialActions from './InitialActions'
+import MayorVoting from './MayorVoting'
 import NightPhase from './NightPhase'
 import DayPhase from './DayPhase'
 import GameStatusModal from './GameStatusModal'
@@ -33,12 +35,20 @@ export default function Game({ gameState, onGameReset }: GameProps) {
     setCurrentGameState(prev => ({
       ...prev,
       players: updatedPlayers,
+      currentPhase: GamePhase.MAYOR_VOTING
+    }))
+  }
+
+  const handleMayorVotingComplete = (mayorId: string) => {
+    setCurrentGameState(prev => ({
+      ...prev,
+      mayorId,
       currentPhase: GamePhase.NIGHT,
       currentNight: 1
     }))
   }
 
-  const handleNightComplete = (actions: GameAction[], updatedPlayers: Player[]) => {
+  const handleNightComplete = (actions: GameAction[], updatedPlayers: Player[], usedAbilities?: { [playerId: string]: string[] }) => {
     // Resolver ações da noite
     const results = resolveNightActions(updatedPlayers, actions)
 
@@ -78,7 +88,8 @@ export default function Game({ gameState, onGameReset }: GameProps) {
       deadPlayers: [...prev.deadPlayers, ...results.deadPlayers.map(id => finalPlayers.find(p => p.id === id)!).filter(Boolean)],
       isGameEnded: victoryCheck.hasWinner,
       winners: victoryCheck.winners,
-      winningTeam: victoryCheck.winningTeam
+      winningTeam: victoryCheck.winningTeam,
+      usedAbilities: usedAbilities ? { ...prev.usedAbilities, ...usedAbilities } : prev.usedAbilities
     }))
   }
 
@@ -150,6 +161,7 @@ export default function Game({ gameState, onGameReset }: GameProps) {
               Fase: <span className="text-primary-400 font-semibold">
                 {currentGameState.currentPhase === GamePhase.CHARACTER_DISTRIBUTION && 'Distribuição de Classes'}
                 {currentGameState.currentPhase === GamePhase.SETUP && 'Ações Iniciais'}
+                {currentGameState.currentPhase === GamePhase.MAYOR_VOTING && 'Votação para Prefeito'}
                 {currentGameState.currentPhase === GamePhase.NIGHT && `Noite ${currentGameState.currentNight}`}
                 {currentGameState.currentPhase === GamePhase.DAY && `Dia ${currentGameState.currentDay}`}
               </span>
@@ -197,10 +209,19 @@ export default function Game({ gameState, onGameReset }: GameProps) {
         />
       )}
 
+      {currentGameState.currentPhase === GamePhase.MAYOR_VOTING && (
+        <MayorVoting
+          players={currentGameState.players}
+          config={currentGameState.config}
+          onVotingComplete={handleMayorVotingComplete}
+        />
+      )}
+
       {currentGameState.currentPhase === GamePhase.NIGHT && (
         <NightPhase
           players={currentGameState.players}
           nightNumber={currentGameState.currentNight}
+          gameState={currentGameState}
           onNightComplete={handleNightComplete}
         />
       )}

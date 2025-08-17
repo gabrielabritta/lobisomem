@@ -1,9 +1,11 @@
-import {
+import type {
   Player,
+  GameState,
+  GameConfig
+} from '../types/game';
+import {
   CharacterClass,
   Team,
-  GameState,
-  GameConfig,
   GOOD_CLASSES,
   EVIL_CLASSES,
   WEREWOLF_CLASSES
@@ -40,43 +42,66 @@ export function distributeCharacters(
   // Distribuir classes obrigatórias primeiro
   const selectedClasses: CharacterClass[] = [];
 
-  // Adicionar lobisomens
+  // Adicionar lobisomens (podem ser repetidos apenas o LOBISOMEM comum)
   for (let i = 0; i < config.numberOfWerewolves; i++) {
     if (werewolfClasses.length > 0) {
-      const randomIndex = Math.floor(Math.random() * werewolfClasses.length);
-      selectedClasses.push(werewolfClasses[randomIndex]);
+      // Se já temos um lobisomem especial, só permitir lobisomem comum
+      const alreadyHasSpecialWerewolf = selectedClasses.some(cls => 
+        cls === CharacterClass.LOBISOMEM_VOODOO || cls === CharacterClass.LOBISOMEM_MORDACA
+      );
+      
+      if (alreadyHasSpecialWerewolf) {
+        // Só pode adicionar lobisomem comum
+        selectedClasses.push(CharacterClass.LOBISOMEM);
+      } else {
+        // Pode escolher qualquer lobisomem disponível
+        const availableWerewolves = werewolfClasses.filter(cls => 
+          !selectedClasses.includes(cls) || cls === CharacterClass.LOBISOMEM
+        );
+        
+        if (availableWerewolves.length > 0) {
+          const randomIndex = Math.floor(Math.random() * availableWerewolves.length);
+          selectedClasses.push(availableWerewolves[randomIndex]);
+        } else {
+          selectedClasses.push(CharacterClass.LOBISOMEM);
+        }
+      }
     } else {
       selectedClasses.push(CharacterClass.LOBISOMEM); // Fallback
     }
   }
 
-  // Adicionar classes más alternativas
+  // Adicionar classes más alternativas (máximo 1 de cada)
   const alternativeEvilClasses = nonWerewolfClasses.filter(cls =>
     [CharacterClass.VAMPIRO, CharacterClass.TRAIDOR, CharacterClass.ZUMBI, CharacterClass.BOBO].includes(cls)
   );
 
   for (let i = 0; i < config.numberOfAlternativeEvil; i++) {
-    if (alternativeEvilClasses.length > 0) {
-      const randomIndex = Math.floor(Math.random() * alternativeEvilClasses.length);
-      selectedClasses.push(alternativeEvilClasses[randomIndex]);
+    const availableAlternatives = alternativeEvilClasses.filter(cls => !selectedClasses.includes(cls));
+    if (availableAlternatives.length > 0) {
+      const randomIndex = Math.floor(Math.random() * availableAlternatives.length);
+      selectedClasses.push(availableAlternatives[randomIndex]);
     }
   }
 
   // Preencher o restante com classes disponíveis
   const remainingSlots = config.numberOfPlayers - selectedClasses.length;
-  const remainingClasses = nonWerewolfClasses.filter(cls =>
-    !selectedClasses.includes(cls) ||
-    (cls === CharacterClass.ALDEAO && selectedClasses.filter(sc => sc === cls).length < 2) // Aldeões podem ter até 2
+  
+  // Primeiro, adicionar todas as classes únicas disponíveis (exceto aldeão)
+  const uniqueClassesNotUsed = nonWerewolfClasses.filter(cls => 
+    cls !== CharacterClass.ALDEAO && !selectedClasses.includes(cls)
   );
-
-  for (let i = 0; i < remainingSlots; i++) {
-    if (remainingClasses.length > 0) {
-      const randomIndex = Math.floor(Math.random() * remainingClasses.length);
-      selectedClasses.push(remainingClasses[randomIndex]);
-    } else {
-      // Se não há mais classes disponíveis, usar aldeão
-      selectedClasses.push(CharacterClass.ALDEAO);
-    }
+  
+  for (let i = 0; i < remainingSlots && uniqueClassesNotUsed.length > 0; i++) {
+    const randomIndex = Math.floor(Math.random() * uniqueClassesNotUsed.length);
+    const selectedClass = uniqueClassesNotUsed.splice(randomIndex, 1)[0];
+    selectedClasses.push(selectedClass);
+  }
+  
+  // Se ainda há slots restantes, preencher com aldeões
+  const stillRemainingSlots = config.numberOfPlayers - selectedClasses.length;
+  for (let i = 0; i < stillRemainingSlots; i++) {
+    selectedClasses.push(CharacterClass.ALDEAO);
   }
 
   // Embaralhar classes
@@ -114,7 +139,6 @@ export function checkVictoryConditions(gameState: GameState): {
   const alivePlayers = gameState.players.filter(p => p.isAlive);
   const aliveWerewolves = alivePlayers.filter(p => isWerewolf(p.character));
   const aliveGood = alivePlayers.filter(p => p.team === Team.GOOD);
-  const aliveEvil = alivePlayers.filter(p => p.team === Team.EVIL && !isWerewolf(p.character));
   const aliveVampire = alivePlayers.find(p => p.character === CharacterClass.VAMPIRO);
   const aliveZombie = alivePlayers.find(p => p.character === CharacterClass.ZUMBI);
   const cupidPlayer = gameState.players.find(p => p.character === CharacterClass.CUPIDO);
