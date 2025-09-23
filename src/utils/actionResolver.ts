@@ -1,6 +1,9 @@
-import {
+import type {
   Player,
   GameAction,
+  GameConfig
+} from '../types/game'
+import {
   ActionType,
   CharacterClass
 } from '../types/game'
@@ -30,6 +33,7 @@ export function resolveNightActions(players: Player[], actions: GameAction[]): A
   const heals = actions.filter(a => a.type === ActionType.HEAL)
   const kills = actions.filter(a => a.type === ActionType.KILL)
   const poisons = actions.filter(a => a.type === ActionType.POISON)
+  const shoots = actions.filter(a => a.type === ActionType.SHOOT)
   const infections = actions.filter(a => a.type === ActionType.INFECT)
   const silences = actions.filter(a => a.type === ActionType.SILENCE)
   const investigations_actions = actions.filter(a => a.type === ActionType.INVESTIGATE)
@@ -40,6 +44,7 @@ export function resolveNightActions(players: Player[], actions: GameAction[]): A
     heals: heals.length,
     kills: kills.length,
     poisons: poisons.length,
+    shoots: shoots.length,
     infections: infections.length,
     silences: silences.length,
     investigations: investigations_actions.length,
@@ -140,7 +145,41 @@ export function resolveNightActions(players: Player[], actions: GameAction[]): A
     }
   })
 
-  // 4. Aplicar infecções
+  // 4. Processar tiros do Bala de Prata
+  shoots.forEach(action => {
+    if (action.targetId) {
+      const shooter = updatedPlayers.find(p => p.id === action.playerId)
+      const target = updatedPlayers.find(p => p.id === action.targetId)
+      
+      if (shooter && target && target.isAlive) {
+        // Verificar se o tiro ignora Talismã baseado na configuração
+        const ignoresTalisman = action.data?.ignoresTalisman || false
+        const hasTalisman = target.hasProtection && target.character === CharacterClass.TALISMA
+        
+        if (!hasTalisman || ignoresTalisman) {
+          // Matar o alvo
+          updatedPlayers = updatedPlayers.map(p =>
+            p.id === action.targetId ? { ...p, isAlive: false } : p
+          )
+          deadPlayers.push(target.id)
+          messages.push(`${shooter.name} atirou em ${target.name} com sua Bala de Prata!`)
+          
+          // Aplicar mortes por amor e ligação de sangue
+          const loveDeath = applyLoveDeath(updatedPlayers, target.id)
+          const bloodDeath = applyBloodBondDeath(updatedPlayers, target.id)
+          deadPlayers.push(...loveDeath, ...bloodDeath)
+        } else {
+          // Talismã protege
+          updatedPlayers = updatedPlayers.map(p =>
+            p.id === action.targetId ? { ...p, hasProtection: false } : p
+          )
+          messages.push(`${target.name} foi protegido por seu Talismã contra a Bala de Prata, mas o perdeu.`)
+        }
+      }
+    }
+  })
+
+  // 5. Aplicar infecções
   infections.forEach(action => {
     if (action.targetId) {
       const target = updatedPlayers.find(p => p.id === action.targetId)
@@ -152,7 +191,7 @@ export function resolveNightActions(players: Player[], actions: GameAction[]): A
     }
   })
 
-  // 5. Aplicar silenciamentos
+  // 6. Aplicar silenciamentos
   silences.forEach(action => {
     if (action.targetId) {
       const target = updatedPlayers.find(p => p.id === action.targetId)
@@ -165,7 +204,7 @@ export function resolveNightActions(players: Player[], actions: GameAction[]): A
     }
   })
 
-  // 6. Processar investigações
+  // 7. Processar investigações
   investigations_actions.forEach(action => {
     if (action.targetId) {
       const investigator = updatedPlayers.find(p => p.id === action.playerId)
@@ -257,6 +296,53 @@ export function resolveNightActions(players: Player[], actions: GameAction[]): A
 
   return {
     deadPlayers: [...new Set(deadPlayers)], // Remove duplicatas
+    updatedPlayers,
+    messages,
+    investigations
+  }
+}
+
+// Função específica para processar tiro do Bala de Prata
+export function processSilverBulletShot(
+  players: Player[], 
+  silverBulletPlayerId: string, 
+  targetId: string, 
+  config: GameConfig
+): ActionResult {
+  let updatedPlayers = [...players]
+  const deadPlayers: string[] = []
+  const messages: string[] = []
+  const investigations: { [playerId: string]: any } = {}
+
+  const shooter = updatedPlayers.find(p => p.id === silverBulletPlayerId)
+  const target = updatedPlayers.find(p => p.id === targetId)
+
+  if (shooter && target && target.isAlive) {
+    const hasTalisman = target.hasProtection && target.character === CharacterClass.TALISMA
+    
+    if (!hasTalisman || config.silverBulletIgnoresTalisman) {
+      // Matar o alvo
+      updatedPlayers = updatedPlayers.map(p =>
+        p.id === targetId ? { ...p, isAlive: false } : p
+      )
+      deadPlayers.push(targetId)
+      messages.push(`${shooter.name} atirou em ${target.name} com sua Bala de Prata!`)
+      
+      // Aplicar mortes por amor e ligação de sangue
+      const loveDeath = applyLoveDeath(updatedPlayers, targetId)
+      const bloodDeath = applyBloodBondDeath(updatedPlayers, targetId)
+      deadPlayers.push(...loveDeath, ...bloodDeath)
+    } else {
+      // Talismã protege
+      updatedPlayers = updatedPlayers.map(p =>
+        p.id === targetId ? { ...p, hasProtection: false } : p
+      )
+      messages.push(`${target.name} foi protegido por seu Talismã contra a Bala de Prata, mas o perdeu.`)
+    }
+  }
+
+  return {
+    deadPlayers: [...new Set(deadPlayers)],
     updatedPlayers,
     messages,
     investigations

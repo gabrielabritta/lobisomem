@@ -155,7 +155,11 @@ export default function GameSetup({ onGameStart }: GameSetupProps) {
       actions: [],
       deadPlayers: [],
       winners: [],
-      isGameEnded: false
+      isGameEnded: false,
+      witchPotions: {
+        healingPotion: true,
+        poisonPotion: true
+      }
     }
 
     onGameStart(gameState)

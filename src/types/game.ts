@@ -36,8 +36,10 @@ export enum GamePhase {
   CHARACTER_DISTRIBUTION = 'character_distribution',
   MAYOR_VOTING = 'mayor_voting',
   NIGHT = 'night',
+  SILVER_BULLET_NIGHT = 'silver_bullet_night', // Quando Bala de Prata morre durante a noite
   DAY = 'day',
   VOTING = 'voting',
+  SILVER_BULLET_DAY = 'silver_bullet_day', // Quando Bala de Prata é expulso durante o dia
   ENDED = 'ended'
 }
 

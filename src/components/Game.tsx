@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import type { GameState, Player, GameAction } from '../types/game'
-import { GamePhase, CHARACTER_NAMES } from '../types/game'
+import { GamePhase, CHARACTER_NAMES, CharacterClass } from '../types/game'
 import CharacterDistribution from './CharacterDistribution'
 import InitialActions from './InitialActions'
 import MayorVoting from './MayorVoting'
 import NightPhase from './NightPhase'
 import DayPhase from './DayPhase'
+import SilverBulletPhase from './SilverBulletPhase'
 import GameStatusModal from './GameStatusModal'
-import { resolveNightActions } from '../utils/actionResolver'
+import { resolveNightActions, processSilverBulletShot } from '../utils/actionResolver'
 import { checkVictoryConditions, applyLoveDeath, applyBloodBondDeath } from '../utils/gameUtils'
 
 interface GameProps {
@@ -48,7 +49,7 @@ export default function Game({ gameState, onGameReset }: GameProps) {
     }))
   }
 
-  const handleNightComplete = (actions: GameAction[], updatedPlayers: Player[], usedAbilities?: { [playerId: string]: string[] }) => {
+  const handleNightComplete = (actions: GameAction[], updatedPlayers: Player[], updatedGameState?: Partial<GameState>) => {
     // Resolver ações da noite
     const results = resolveNightActions(updatedPlayers, actions)
 
@@ -79,17 +80,29 @@ export default function Game({ gameState, onGameReset }: GameProps) {
       investigations: results.investigations
     })
 
+    // Verificar se algum Bala de Prata morreu durante a noite
+    const deadSilverBullet = results.deadPlayers
+      .map(id => finalPlayers.find(p => p.id === id))
+      .find(p => p && p.character === CharacterClass.BALA_DE_PRATA && currentGameState.config.silverBulletKillsWhenDead)
+
+    const nextPhase = victoryCheck.hasWinner 
+      ? GamePhase.ENDED 
+      : deadSilverBullet 
+        ? GamePhase.SILVER_BULLET_NIGHT 
+        : GamePhase.DAY
+
     setCurrentGameState(prev => ({
       ...prev,
       players: finalPlayers,
       actions: [...prev.actions, ...actions],
-      currentPhase: victoryCheck.hasWinner ? GamePhase.ENDED : GamePhase.DAY,
+      currentPhase: nextPhase,
       currentDay: prev.currentNight,
       deadPlayers: [...prev.deadPlayers, ...results.deadPlayers.map(id => finalPlayers.find(p => p.id === id)!).filter(Boolean)],
       isGameEnded: victoryCheck.hasWinner,
       winners: victoryCheck.winners,
       winningTeam: victoryCheck.winningTeam,
-      usedAbilities: usedAbilities ? { ...prev.usedAbilities, ...usedAbilities } : prev.usedAbilities
+      usedAbilities: updatedGameState?.usedAbilities ? { ...prev.usedAbilities, ...updatedGameState.usedAbilities } : prev.usedAbilities,
+      witchPotions: updatedGameState?.witchPotions || prev.witchPotions
     }))
   }
 
@@ -134,11 +147,24 @@ export default function Game({ gameState, onGameReset }: GameProps) {
       players: finalPlayers
     })
 
+    // Verificar se o Bala de Prata foi expulso
+    const expelledSilverBullet = expelledPlayerId 
+      ? finalPlayers.find(p => p.id === expelledPlayerId && p.character === CharacterClass.BALA_DE_PRATA)
+      : null
+
+    const shouldShowSilverBulletPhase = expelledSilverBullet && currentGameState.config.silverBulletKillsWhenExpelled
+
+    const nextPhase = victoryCheck.hasWinner 
+      ? GamePhase.ENDED 
+      : shouldShowSilverBulletPhase 
+        ? GamePhase.SILVER_BULLET_DAY 
+        : GamePhase.NIGHT
+
     setCurrentGameState(prev => ({
       ...prev,
       players: finalPlayers,
       mayorId: newMayorId || prev.mayorId,
-      currentPhase: victoryCheck.hasWinner ? GamePhase.ENDED : GamePhase.NIGHT,
+      currentPhase: nextPhase,
       currentNight: victoryCheck.hasWinner ? prev.currentNight : prev.currentNight + 1,
       deadPlayers: [...prev.deadPlayers, ...newDeadPlayers.map(id => finalPlayers.find(p => p.id === id)!).filter(Boolean)],
       isGameEnded: victoryCheck.hasWinner,
@@ -148,6 +174,66 @@ export default function Game({ gameState, onGameReset }: GameProps) {
 
     // Limpar resultados da noite anterior
     setNightResults({ deadPlayers: [], messages: [], investigations: {} })
+  }
+
+  const handleSilverBulletShot = (silverBulletPlayerId: string, targetId: string, trigger: 'night_death' | 'day_expulsion') => {
+    if (!targetId) {
+      // Bala de Prata decidiu não atirar
+      const nextPhase = trigger === 'night_death' ? GamePhase.DAY : GamePhase.NIGHT
+      const nextNight = trigger === 'day_expulsion' ? currentGameState.currentNight + 1 : currentGameState.currentNight
+      
+      setCurrentGameState(prev => ({
+        ...prev,
+        currentPhase: nextPhase,
+        currentNight: nextNight
+      }))
+      return
+    }
+
+    // Processar o tiro
+    const results = processSilverBulletShot(
+      currentGameState.players,
+      silverBulletPlayerId,
+      targetId,
+      currentGameState.config
+    )
+
+    // Atualizar jogadores
+    const finalPlayers = results.updatedPlayers.map(player => ({
+      ...player,
+      isAlive: player.isAlive && !results.deadPlayers.includes(player.id)
+    }))
+
+    // Verificar condições de vitória
+    const victoryCheck = checkVictoryConditions({
+      ...currentGameState,
+      players: finalPlayers
+    })
+
+    // Adicionar mensagens do tiro aos resultados da noite
+    setNightResults(prev => ({
+      ...prev,
+      messages: [...prev.messages, ...results.messages]
+    }))
+
+    const nextPhase = victoryCheck.hasWinner 
+      ? GamePhase.ENDED 
+      : trigger === 'night_death' 
+        ? GamePhase.DAY 
+        : GamePhase.NIGHT
+
+    const nextNight = trigger === 'day_expulsion' ? currentGameState.currentNight + 1 : currentGameState.currentNight
+
+    setCurrentGameState(prev => ({
+      ...prev,
+      players: finalPlayers,
+      currentPhase: nextPhase,
+      currentNight: nextNight,
+      deadPlayers: [...prev.deadPlayers, ...results.deadPlayers.map(id => finalPlayers.find(p => p.id === id)!).filter(Boolean)],
+      isGameEnded: victoryCheck.hasWinner,
+      winners: victoryCheck.winners,
+      winningTeam: victoryCheck.winningTeam
+    }))
   }
 
   return (
@@ -226,6 +312,22 @@ export default function Game({ gameState, onGameReset }: GameProps) {
         />
       )}
 
+      {currentGameState.currentPhase === GamePhase.SILVER_BULLET_NIGHT && (
+        <SilverBulletPhase
+          silverBulletPlayer={currentGameState.players.find(p => 
+            p.character === CharacterClass.BALA_DE_PRATA && !p.isAlive
+          )!}
+          alivePlayers={currentGameState.players.filter(p => p.isAlive)}
+          config={currentGameState.config}
+          trigger="night_death"
+          onShoot={(targetId) => handleSilverBulletShot(
+            currentGameState.players.find(p => p.character === CharacterClass.BALA_DE_PRATA && !p.isAlive)!.id,
+            targetId,
+            'night_death'
+          )}
+        />
+      )}
+
       {currentGameState.currentPhase === GamePhase.DAY && (
         <DayPhase
           players={currentGameState.players}
@@ -236,6 +338,22 @@ export default function Game({ gameState, onGameReset }: GameProps) {
           nightMessages={nightResults.messages}
           investigations={nightResults.investigations}
           onDayComplete={handleDayComplete}
+        />
+      )}
+
+      {currentGameState.currentPhase === GamePhase.SILVER_BULLET_DAY && (
+        <SilverBulletPhase
+          silverBulletPlayer={currentGameState.players.find(p => 
+            p.character === CharacterClass.BALA_DE_PRATA && !p.isAlive
+          )!}
+          alivePlayers={currentGameState.players.filter(p => p.isAlive)}
+          config={currentGameState.config}
+          trigger="day_expulsion"
+          onShoot={(targetId) => handleSilverBulletShot(
+            currentGameState.players.find(p => p.character === CharacterClass.BALA_DE_PRATA && !p.isAlive)!.id,
+            targetId,
+            'day_expulsion'
+          )}
         />
       )}
 

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { Player, GameAction } from '../types/game'
+import type { Player, GameAction, GameState, WitchPotions } from '../types/game'
 import { ActionType, CharacterClass, CHARACTER_NAMES } from '../types/game'
 import { isWerewolf } from '../utils/gameUtils'
 
@@ -7,10 +7,11 @@ interface WitchInterfaceProps {
   witch: Player
   actions: GameAction[]
   players: Player[]
+  witchPotions: { healingPotion: boolean; poisonPotion: boolean }
   onWitchAction: (action: 'heal' | 'poison' | 'skip', targetId?: string) => void
 }
 
-function WitchInterface({ witch, actions, players, onWitchAction }: WitchInterfaceProps) {
+function WitchInterface({ witch, actions, players, witchPotions, onWitchAction }: WitchInterfaceProps) {
   const [selectedAction, setSelectedAction] = useState<'heal' | 'poison' | null>(null)
   const [selectedTarget, setSelectedTarget] = useState<string>('')
 
@@ -22,18 +23,18 @@ function WitchInterface({ witch, actions, players, onWitchAction }: WitchInterfa
     .map(targetId => players.find(p => p.id === targetId))
     .filter(Boolean) as Player[]
 
+  // A bruxa só pode ver quem vai morrer se tiver a poção de cura
+  const canSeeDeaths = witchPotions.healingPotion
+  // A bruxa só pode ver a opção de cura se alguém for morrer E ela tiver a poção
+  const canShowHealOption = dyingPlayers.length > 0 && witchPotions.healingPotion
+
   const handlePotionUse = () => {
     if (selectedAction && selectedTarget) {
       onWitchAction(selectedAction, selectedTarget)
-    } else if (selectedAction === 'heal' && dyingPlayers.length === 0) {
-      alert('Não há ninguém para curar esta noite!')
     } else if (selectedAction && !selectedTarget) {
       alert('Selecione um alvo!')
     }
   }
-
-  const canUseHealingPotion = true // TODO: Verificar se já usou
-  const canUsePoisonPotion = true // TODO: Verificar se já usou
 
   return (
     <div className="space-y-6">
@@ -46,8 +47,8 @@ function WitchInterface({ witch, actions, players, onWitchAction }: WitchInterfa
         </p>
       </div>
 
-      {/* Mostrar quem morrerá esta noite */}
-      {dyingPlayers.length > 0 && (
+      {/* Mostrar quem morrerá esta noite - apenas se a bruxa tiver poção de cura */}
+      {canSeeDeaths && dyingPlayers.length > 0 && (
         <div className="bg-red-900/30 border border-red-700 rounded-lg p-4">
           <h4 className="font-semibold mb-2 text-red-300">💀 Pessoas que morrerão esta noite:</h4>
           <div className="space-y-1">
@@ -60,9 +61,15 @@ function WitchInterface({ witch, actions, players, onWitchAction }: WitchInterfa
         </div>
       )}
 
-      {dyingPlayers.length === 0 && (
+      {canSeeDeaths && dyingPlayers.length === 0 && (
         <div className="bg-green-900/30 border border-green-700 rounded-lg p-4">
           <p className="text-green-300">🌸 Ninguém morrerá esta noite (ainda).</p>
+        </div>
+      )}
+
+      {!canSeeDeaths && (
+        <div className="bg-yellow-900/30 border border-yellow-700 rounded-lg p-4">
+          <p className="text-yellow-300">🔮 Você não possui mais a poção de cura, então não pode ver quem morrerá esta noite.</p>
         </div>
       )}
 
@@ -75,28 +82,29 @@ function WitchInterface({ witch, actions, players, onWitchAction }: WitchInterfa
           ⏭️ Não Usar Poções
         </button>
         
-        <button
-          onClick={() => setSelectedAction(selectedAction === 'heal' ? null : 'heal')}
-          disabled={!canUseHealingPotion || dyingPlayers.length === 0}
-          className={`btn-primary transition-all ${
-            selectedAction === 'heal' 
-              ? 'bg-green-500 hover:bg-green-600' 
-              : 'bg-green-600 hover:bg-green-700'
-          } disabled:opacity-50 disabled:cursor-not-allowed`}
-        >
-          💚 Poção de Cura {!canUseHealingPotion && '(Usada)'}
-        </button>
+        {canShowHealOption && (
+          <button
+            onClick={() => setSelectedAction(selectedAction === 'heal' ? null : 'heal')}
+            className={`btn-primary transition-all ${
+              selectedAction === 'heal' 
+                ? 'bg-green-500 hover:bg-green-600' 
+                : 'bg-green-600 hover:bg-green-700'
+            }`}
+          >
+            💚 Poção de Cura
+          </button>
+        )}
         
         <button
           onClick={() => setSelectedAction(selectedAction === 'poison' ? null : 'poison')}
-          disabled={!canUsePoisonPotion}
+          disabled={!witchPotions.poisonPotion}
           className={`btn-primary transition-all ${
             selectedAction === 'poison' 
               ? 'bg-red-500 hover:bg-red-600' 
               : 'bg-red-600 hover:bg-red-700'
           } disabled:opacity-50 disabled:cursor-not-allowed`}
         >
-          💀 Poção Venenosa {!canUsePoisonPotion && '(Usada)'}
+          💀 Poção Venenosa {!witchPotions.poisonPotion && '(Usada)'}
         </button>
       </div>
 
@@ -642,12 +650,7 @@ function VoodooWerewolfInterface({ voodooWerewolf, players, onVoodooAction }: Vo
   )
 }
 
-interface NightPhaseProps {
-  players: Player[]
-  nightNumber: number
-  gameState: any // Temporário - será tipado corretamente
-  onNightComplete: (actions: GameAction[], updatedPlayers: Player[], usedAbilities?: { [playerId: string]: string[] }) => void
-}
+
 
 type NightStep =
   | 'werewolves'
@@ -658,6 +661,13 @@ type NightStep =
   | 'witch'
   | 'complete'
 
+interface NightPhaseProps {
+  players: Player[]
+  nightNumber: number
+  gameState?: GameState
+  onNightComplete: (actions: GameAction[], updatedPlayers: Player[], updatedGameState?: Partial<GameState>) => void
+}
+
 export default function NightPhase({ players, nightNumber, gameState, onNightComplete }: NightPhaseProps) {
   const [currentStep, setCurrentStep] = useState<NightStep>('werewolves')
   const [actions, setActions] = useState<GameAction[]>([])
@@ -665,6 +675,7 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
   const [selectedTarget, setSelectedTarget] = useState<string>('')
   const [usedAbilities, setUsedAbilities] = useState<{ [playerId: string]: string[] }>(gameState?.usedAbilities || {})
   const [investigationResults, setInvestigationResults] = useState<{ playerId: string, result: string, type: 'vidente' | 'medium' }[]>([])
+  const [updatedWitchPotions, setUpdatedWitchPotions] = useState(gameState?.witchPotions || { healingPotion: true, poisonPotion: true })
   const alivePlayers = players.filter(p => p.isAlive)
   const werewolves = alivePlayers.filter(p => isWerewolf(p.character))
   const voodooWerewolf = alivePlayers.find(p => p.character === CharacterClass.LOBISOMEM_VOODOO)
@@ -897,6 +908,13 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
     if (action === 'heal' || action === 'poison') {
       const actionType = action === 'heal' ? ActionType.HEAL : ActionType.POISON
       addAction(witch!.id, actionType, targetId)
+      
+      // Consumir a poção usada
+      if (action === 'heal') {
+        setUpdatedWitchPotions((prev: WitchPotions) => ({ ...prev, healingPotion: false }))
+      } else if (action === 'poison') {
+        setUpdatedWitchPotions((prev: WitchPotions) => ({ ...prev, poisonPotion: false }))
+      }
     }
 
     setSelectedTarget('')
@@ -913,7 +931,12 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
       }))
     })
 
-    onNightComplete(actions, players, usedAbilities)
+    const updatedGameState = {
+      usedAbilities,
+      witchPotions: updatedWitchPotions
+    }
+
+    onNightComplete(actions, players, updatedGameState)
   }
 
   const getPlayerActionType = (player: Player): ActionType => {
@@ -1098,6 +1121,7 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
             witch={witch}
             actions={actions}
             players={alivePlayers}
+            witchPotions={updatedWitchPotions}
             onWitchAction={handleWitchAction}
           />
         )}
