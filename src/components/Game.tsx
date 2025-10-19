@@ -26,10 +26,50 @@ export default function Game({ gameState, onGameReset }: GameProps) {
   const [showGameStatus, setShowGameStatus] = useState(false)
 
   const handleDistributionComplete = () => {
-    setCurrentGameState(prev => ({
-      ...prev,
-      currentPhase: GamePhase.SETUP // Mover para ações iniciais
-    }))
+    if (currentGameState.config.debugMode) {
+      let updatedPlayers = [...currentGameState.players];
+
+      const occultPlayer = updatedPlayers.find(p => p.character === CharacterClass.OCCULT);
+      if (occultPlayer) {
+        const possibleTargets = updatedPlayers.filter(p => p.id !== occultPlayer.id);
+        if (possibleTargets.length > 0) {
+          const target = possibleTargets[Math.floor(Math.random() * possibleTargets.length)];
+          updatedPlayers = updatedPlayers.map(p => 
+            p.id === occultPlayer.id 
+              ? { ...p, originalCharacter: p.character, character: target.character, team: target.team } 
+              : p
+          );
+        }
+      }
+
+      const cupidPlayer = updatedPlayers.find(p => p.character === CharacterClass.CUPIDO);
+      if (cupidPlayer) {
+        const possibleLovers = updatedPlayers.filter(p => p.id !== cupidPlayer.id);
+        if (possibleLovers.length >= 2) {
+          const lover1Index = Math.floor(Math.random() * possibleLovers.length);
+          const lover1 = possibleLovers[lover1Index];
+          possibleLovers.splice(lover1Index, 1);
+          const lover2 = possibleLovers[Math.floor(Math.random() * possibleLovers.length)];
+
+          updatedPlayers = updatedPlayers.map(p => {
+            if (p.id === lover1.id) {
+              return { ...p, isInLove: true, lovePartnerId: lover2.id };
+            }
+            if (p.id === lover2.id) {
+              return { ...p, isInLove: true, lovePartnerId: lover1.id };
+            }
+            return p;
+          });
+        }
+      }
+
+      handleInitialActionsComplete(updatedPlayers);
+    } else {
+      setCurrentGameState(prev => ({
+        ...prev,
+        currentPhase: GamePhase.SETUP // Mover para ações iniciais
+      }))
+    }
   }
 
   const handleInitialActionsComplete = (updatedPlayers: Player[]) => {
@@ -365,13 +405,13 @@ export default function Game({ gameState, onGameReset }: GameProps) {
 
             {currentGameState.winningTeam && (
               <div className={`p-6 rounded-lg ${
-                currentGameState.winningTeam === 'good' ? 'bg-blue-900/30 border border-blue-700' :
-                currentGameState.winningTeam === 'evil' ? 'bg-red-900/30 border border-red-700' :
+                currentGameState.winningTeam === 'good' ? 'bg-blue-900/30 border border-blue-700' : 
+                currentGameState.winningTeam === 'evil' ? 'bg-red-900/30 border border-red-700' : 
                 'bg-purple-900/30 border border-purple-700'
               }`}>
                 <h4 className="text-xl font-semibold mb-4">
-                  {currentGameState.winningTeam === 'good' ? '👼 Vitória dos Inocentes!' :
-                   currentGameState.winningTeam === 'evil' ? '😈 Vitória do Mal!' :
+                  {currentGameState.winningTeam === 'good' ? '👼 Vitória dos Inocentes!' : 
+                   currentGameState.winningTeam === 'evil' ? '😈 Vitória do Mal!' : 
                    '🎭 Vitória Especial!'}
                 </h4>
 

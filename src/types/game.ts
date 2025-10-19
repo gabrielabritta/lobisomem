@@ -98,6 +98,7 @@ export interface GameConfig {
   silverBulletIgnoresTalisman: boolean;
   werewolfGagMode: 'per_game' | 'cooldown';
   werewolfGagValue: number; // x vezes por partida ou cooldown de x noites
+  debugMode?: boolean;
 }
 
 export interface GameState {

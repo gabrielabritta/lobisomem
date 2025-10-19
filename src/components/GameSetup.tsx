@@ -149,8 +149,8 @@ export default function GameSetup({ onGameStart }: GameSetupProps) {
       id: `game_${Date.now()}`,
       config,
       players,
-      currentPhase: GamePhase.CHARACTER_DISTRIBUTION,
-      currentNight: 0,
+      currentPhase: config.debugMode ? GamePhase.MAYOR_VOTING : GamePhase.CHARACTER_DISTRIBUTION,
+      currentNight: config.debugMode ? 1 : 0,
       currentDay: 0,
       actions: [],
       deadPlayers: [],
@@ -368,6 +368,16 @@ export default function GameSetup({ onGameStart }: GameSetupProps) {
                   className="rounded"
                 />
                 <span className="text-sm">Bala de Prata ignora Talismã</span>
+              </label>
+
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={config.debugMode}
+                  onChange={(e) => setConfig(prev => ({ ...prev, debugMode: e.target.checked }))}
+                  className="rounded"
+                />
+                <span className="text-sm">Modo Debug (pular revelação)</span>
               </label>
             </div>
           )}

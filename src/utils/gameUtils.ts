@@ -381,6 +381,7 @@ export function createDefaultConfig(): GameConfig {
     silverBulletKillsWhenDead: true,
     silverBulletIgnoresTalisman: false,
     werewolfGagMode: 'per_game',
-    werewolfGagValue: 1
+    werewolfGagValue: 1,
+    debugMode: false
   };
 }

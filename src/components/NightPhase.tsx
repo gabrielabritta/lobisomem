@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Player, GameAction, GameState, WitchPotions } from '../types/game'
 import { ActionType, CharacterClass, CHARACTER_NAMES } from '../types/game'
 import { isWerewolf } from '../utils/gameUtils'
+import PassDeviceScreen from './PassDeviceScreen'
 
 interface WitchInterfaceProps {
   witch: Player
@@ -658,6 +659,7 @@ type NightStep =
   | 'gag_werewolf'
   | 'occult'
   | 'player_actions'
+  | 'pass_device'
   | 'witch'
   | 'complete'
 
@@ -698,6 +700,14 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
            (player.character === CharacterClass.OCCULT && player.originalCharacter &&
             actionCharacters.includes(player.originalCharacter))
   })
+  const playerHasAction = new Set(actionPlayers.map(p => p.id))
+
+  // Lista de jogadores para o loop principal de ações noturnas
+  const playersInPlayerActionsStep = alivePlayers.filter(p =>
+    !isWerewolf(p.character) &&
+    p.character !== CharacterClass.OCCULT &&
+    p.character !== CharacterClass.BRUXA
+  )
 
   console.log('Jogadores com ações:', actionPlayers.map(p => ({ name: p.name, character: p.character })))
 
@@ -723,6 +733,16 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
     setActions(prev => [...prev, newAction])
   }
 
+  const advanceToNextPlayerOrStep = () => {
+    if (currentPlayerIndex < playersInPlayerActionsStep.length - 1) {
+      setCurrentStep('pass_device')
+    } else if (witch) {
+      setCurrentStep('witch')
+    } else {
+      setCurrentStep('complete')
+    }
+  }
+
   const handleWerewolfAction = () => {
     if (!selectedTarget) return
 
@@ -740,7 +760,7 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
       setCurrentStep('gag_werewolf')
     } else if (occult) {
       setCurrentStep('occult')
-    } else if (actionPlayers.length > 0) {
+    } else if (playersInPlayerActionsStep.length > 0) {
       setCurrentStep('player_actions')
     } else if (witch) {
       setCurrentStep('witch')
@@ -760,7 +780,7 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
       setCurrentStep('gag_werewolf')
     } else if (occult) {
       setCurrentStep('occult')
-    } else if (actionPlayers.length > 0) {
+    } else if (playersInPlayerActionsStep.length > 0) {
       setCurrentStep('player_actions')
     } else if (witch) {
       setCurrentStep('witch')
@@ -772,7 +792,7 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
 
 
   const handleVidenteAction = (useAbility: boolean, targetId?: string) => {
-    const currentPlayer = actionPlayers[currentPlayerIndex]
+    const currentPlayer = playersInPlayerActionsStep[currentPlayerIndex]
     
     if (useAbility && targetId) {
       addAction(currentPlayer.id, ActionType.INVESTIGATE, targetId)
@@ -797,18 +817,11 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
     }
 
     setSelectedTarget('')
-
-    if (currentPlayerIndex < actionPlayers.length - 1) {
-      setCurrentPlayerIndex(prev => prev + 1)
-    } else if (witch) {
-      setCurrentStep('witch')
-    } else {
-      setCurrentStep('complete')
-    }
+    advanceToNextPlayerOrStep()
   }
 
   const handleMediumAction = (useAbility: boolean, targetId?: string) => {
-    const currentPlayer = actionPlayers[currentPlayerIndex]
+    const currentPlayer = playersInPlayerActionsStep[currentPlayerIndex]
     
     if (useAbility && targetId) {
       addAction(currentPlayer.id, ActionType.INVESTIGATE, targetId)
@@ -832,18 +845,11 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
     }
 
     setSelectedTarget('')
-
-    if (currentPlayerIndex < actionPlayers.length - 1) {
-      setCurrentPlayerIndex(prev => prev + 1)
-    } else if (witch) {
-      setCurrentStep('witch')
-    } else {
-      setCurrentStep('complete')
-    }
+    advanceToNextPlayerOrStep()
   }
 
   const handlePlayerAction = (actionType: ActionType) => {
-    const currentPlayer = actionPlayers[currentPlayerIndex]
+    const currentPlayer = playersInPlayerActionsStep[currentPlayerIndex]
 
     console.log('Processando ação do jogador:', {
       name: currentPlayer.name,
@@ -894,14 +900,12 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
     }
 
     setSelectedTarget('')
+    advanceToNextPlayerOrStep()
+  }
 
-    if (currentPlayerIndex < actionPlayers.length - 1) {
-      setCurrentPlayerIndex(prev => prev + 1)
-    } else if (witch) {
-      setCurrentStep('witch')
-    } else {
-      setCurrentStep('complete')
-    }
+  const handleContinueFromPassDevice = () => {
+    setCurrentPlayerIndex(prev => prev + 1)
+    setCurrentStep('player_actions')
   }
 
   const handleWitchAction = (action: 'heal' | 'poison' | 'skip', targetId?: string) => {
@@ -1027,90 +1031,113 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
           />
         )}
 
-        {currentStep === 'player_actions' && actionPlayers.length > 0 && (
+        {currentStep === 'pass_device' && (
+          <PassDeviceScreen
+            nextPlayerName={playersInPlayerActionsStep[currentPlayerIndex + 1].name}
+            onContinue={handleContinueFromPassDevice}
+          />
+        )}
+
+        {currentStep === 'player_actions' && playersInPlayerActionsStep.length > 0 && (
           <>
-            {(actionPlayers[currentPlayerIndex].character === CharacterClass.MEDIUM || 
-              (actionPlayers[currentPlayerIndex].character === CharacterClass.OCCULT && 
-               actionPlayers[currentPlayerIndex].originalCharacter === CharacterClass.MEDIUM)) ? (
-              <MediumInterface
-                medium={actionPlayers[currentPlayerIndex]}
-                allPlayers={players}
-                usedAbilities={usedAbilities}
-                onMediumAction={handleMediumAction}
-              />
-            ) : (actionPlayers[currentPlayerIndex].character === CharacterClass.VIDENTE || 
-              (actionPlayers[currentPlayerIndex].character === CharacterClass.OCCULT && 
-               actionPlayers[currentPlayerIndex].originalCharacter === CharacterClass.VIDENTE)) ? (
-              <VidenteInterface
-                vidente={actionPlayers[currentPlayerIndex]}
-                alivePlayers={alivePlayers}
-                onVidenteAction={handleVidenteAction}
-              />
-            ) : (
-              <div className="space-y-6">
-                <div className="text-center">
-                  <h3 className="text-xl font-semibold mb-2">
-                    {CHARACTER_NAMES[actionPlayers[currentPlayerIndex].character]} - {actionPlayers[currentPlayerIndex].name}
-                  </h3>
-                  <p className="text-dark-300 mb-4">
-                    Escolha um jogador para {getActionDescription(actionPlayers[currentPlayerIndex])}
-                  </p>
-                  <div className="text-sm text-primary-400">
-                    Jogador {currentPlayerIndex + 1} de {actionPlayers.length}
-                  </div>
-
-                  {/* Mostrar informações de debug para o vampiro */}
-                  {actionPlayers[currentPlayerIndex].character === CharacterClass.VAMPIRO && (
-                    <div className="bg-red-900/30 border border-red-700 rounded-lg p-3 mt-2">
-                      <p className="text-sm text-red-300">
-                        🧛‍♂️ Você é o Vampiro! Escolha alguém para matar esta noite.
+            {playerHasAction.has(playersInPlayerActionsStep[currentPlayerIndex].id) ? (
+              <>
+                {(playersInPlayerActionsStep[currentPlayerIndex].character === CharacterClass.MEDIUM || 
+                  (playersInPlayerActionsStep[currentPlayerIndex].character === CharacterClass.OCCULT && 
+                  playersInPlayerActionsStep[currentPlayerIndex].originalCharacter === CharacterClass.MEDIUM)) ? (
+                  <MediumInterface
+                    medium={playersInPlayerActionsStep[currentPlayerIndex]}
+                    allPlayers={players}
+                    usedAbilities={usedAbilities}
+                    onMediumAction={handleMediumAction}
+                  />
+                ) : (playersInPlayerActionsStep[currentPlayerIndex].character === CharacterClass.VIDENTE || 
+                  (playersInPlayerActionsStep[currentPlayerIndex].character === CharacterClass.OCCULT && 
+                  playersInPlayerActionsStep[currentPlayerIndex].originalCharacter === CharacterClass.VIDENTE)) ? (
+                  <VidenteInterface
+                    vidente={playersInPlayerActionsStep[currentPlayerIndex]}
+                    alivePlayers={alivePlayers}
+                    onVidenteAction={handleVidenteAction}
+                  />
+                ) : (
+                  <div className="space-y-6">
+                    <div className="text-center">
+                      <h3 className="text-xl font-semibold mb-2">
+                        {CHARACTER_NAMES[playersInPlayerActionsStep[currentPlayerIndex].character]} - {playersInPlayerActionsStep[currentPlayerIndex].name}
+                      </h3>
+                      <p className="text-dark-300 mb-4">
+                        Escolha um jogador para {getActionDescription(playersInPlayerActionsStep[currentPlayerIndex])}
                       </p>
-                    </div>
-                  )}
-                </div>
+                      <div className="text-sm text-primary-400">
+                        Jogador {currentPlayerIndex + 1} de {playersInPlayerActionsStep.length}
+                      </div>
 
-                {actionPlayers[currentPlayerIndex].isSilenced && (
-                  <div className="bg-yellow-600 text-yellow-100 p-4 rounded-lg text-center">
-                    🤐 Você foi silenciado e não pode falar no próximo dia!
+                      {/* Mostrar informações de debug para o vampiro */}
+                      {playersInPlayerActionsStep[currentPlayerIndex].character === CharacterClass.VAMPIRO && (
+                        <div className="bg-red-900/30 border border-red-700 rounded-lg p-3 mt-2">
+                          <p className="text-sm text-red-300">
+                            🧛‍♂️ Você é o Vampiro! Escolha alguém para matar esta noite.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {playersInPlayerActionsStep[currentPlayerIndex].isSilenced && (
+                      <div className="bg-yellow-600 text-yellow-100 p-4 rounded-lg text-center">
+                        🤐 Você foi silenciado e não pode falar no próximo dia!
+                      </div>
+                    )}
+
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {alivePlayers
+                        .filter(p => p.id !== playersInPlayerActionsStep[currentPlayerIndex].id)
+                        .map(player => (
+                          <button
+                            key={player.id}
+                            onClick={() => setSelectedTarget(player.id)}
+                            className={`p-4 rounded-lg border transition-all ${
+                              selectedTarget === player.id
+                                ? 'bg-primary-600 border-primary-500'
+                                : 'bg-dark-700 border-dark-600 hover:bg-dark-600'
+                            }`}
+                          >
+                            <div className="font-medium">{player.name}</div>
+                            <div className="text-sm text-dark-300 mt-1">
+                              {player.isAlive ? 'Selecionar' : '💀 Morto'}
+                            </div>
+                          </button>
+                        ))}
+                    </div>
+
+                    <div className="text-center space-x-4">
+                      <button
+                        onClick={() => handlePlayerAction(getPlayerActionType(playersInPlayerActionsStep[currentPlayerIndex]))}
+                        disabled={!selectedTarget}
+                        className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        ✅ Confirmar Ação
+                      </button>
+                      <button
+                        onClick={() => handlePlayerAction(getPlayerActionType(playersInPlayerActionsStep[currentPlayerIndex]))}
+                        className="btn-secondary"
+                      >
+                        ⏭️ Pular Ação
+                      </button>
+                    </div>
                   </div>
                 )}
-
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {alivePlayers
-                    .filter(p => p.id !== actionPlayers[currentPlayerIndex].id)
-                    .map(player => (
-                      <button
-                        key={player.id}
-                        onClick={() => setSelectedTarget(player.id)}
-                        className={`p-4 rounded-lg border transition-all ${
-                          selectedTarget === player.id
-                            ? 'bg-primary-600 border-primary-500'
-                            : 'bg-dark-700 border-dark-600 hover:bg-dark-600'
-                        }`}
-                      >
-                        <div className="font-medium">{player.name}</div>
-                        <div className="text-sm text-dark-300 mt-1">
-                          {player.isAlive ? 'Selecionar' : '💀 Morto'}
-                        </div>
-                      </button>
-                    ))}
-                </div>
-
-                <div className="text-center space-x-4">
-                  <button
-                    onClick={() => handlePlayerAction(getPlayerActionType(actionPlayers[currentPlayerIndex]))}
-                    disabled={!selectedTarget}
-                    className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    ✅ Confirmar Ação
-                  </button>
-                  <button
-                    onClick={() => handlePlayerAction(getPlayerActionType(actionPlayers[currentPlayerIndex]))}
-                    className="btn-secondary"
-                  >
-                    ⏭️ Pular Ação
-                  </button>
-                </div>
+              </>
+            ) : (
+              <div className="card text-center space-y-6">
+                <h2 className="text-2xl font-bold">Sua Vez, {playersInPlayerActionsStep[currentPlayerIndex].name}</h2>
+                <p className="text-lg">Você dorme um sono profundo.</p>
+                <p className="text-dark-300">Passe o dispositivo para o próximo jogador.</p>
+                <button
+                  onClick={advanceToNextPlayerOrStep}
+                  className="btn-primary text-lg px-8 py-4"
+                >
+                  Continuar
+                </button>
               </div>
             )}
           </>

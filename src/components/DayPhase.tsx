@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import type { Player, GameConfig } from '../types/game'
 import { CharacterClass, CHARACTER_NAMES } from '../types/game'
 import { processVotes } from '../utils/gameUtils'
+import PassDeviceScreen from './PassDeviceScreen'
 
 interface DayPhaseProps {
   players: Player[]
@@ -20,6 +21,7 @@ type DayStep =
   | 'mayor_voting'
   | 'mayor_result'
   | 'expulsion_voting'
+  | 'pass_device'
   | 'expulsion_result'
   | 'complete'
 
@@ -76,7 +78,7 @@ export default function DayPhase({
     setVotes(newVotes)
 
     if (currentVoterIndex < alivePlayers.length - 1) {
-      setCurrentVoterIndex(prev => prev + 1)
+      setCurrentStep('pass_device')
     } else {
       // Processar resultado da votação
       const result = processVotes(newVotes)
@@ -85,6 +87,11 @@ export default function DayPhase({
       setVotingResult(result)
       setCurrentStep('expulsion_result')
     }
+  }
+
+  const handleContinueFromPassDevice = () => {
+    setCurrentVoterIndex(prev => prev + 1)
+    setCurrentStep('expulsion_voting')
   }
 
 
@@ -239,6 +246,12 @@ export default function DayPhase({
           </div>
         )}
 
+        {currentStep === 'pass_device' && (
+          <PassDeviceScreen
+            nextPlayerName={alivePlayers[currentVoterIndex + 1].name}
+            onContinue={handleContinueFromPassDevice}
+          />
+        )}
 
 
         {currentStep === 'expulsion_voting' && (
