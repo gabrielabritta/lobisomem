@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { Player, GameAction, GameState, WitchPotions } from '../types/game'
 import { ActionType, CharacterClass, CHARACTER_NAMES } from '../types/game'
 import { isWerewolf } from '../utils/gameUtils'
@@ -678,6 +678,17 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
   const [usedAbilities, setUsedAbilities] = useState<{ [playerId: string]: string[] }>(gameState?.usedAbilities || {})
   const [investigationResults, setInvestigationResults] = useState<{ playerId: string, result: string, type: 'vidente' | 'medium' }[]>([])
   const [updatedWitchPotions, setUpdatedWitchPotions] = useState(gameState?.witchPotions || { healingPotion: true, poisonPotion: true })
+
+  useEffect(() => {
+    if (currentStep === 'player_actions' && playersInPlayerActionsStep.length > 0) {
+      const currentPlayer = playersInPlayerActionsStep[currentPlayerIndex];
+      if (currentPlayer && !playerHasAction.has(currentPlayer.id)) {
+        advanceToNextPlayerOrStep();
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep, currentPlayerIndex]);
+
   const alivePlayers = players.filter(p => p.isAlive)
   const werewolves = alivePlayers.filter(p => isWerewolf(p.character))
   const voodooWerewolf = alivePlayers.find(p => p.character === CharacterClass.LOBISOMEM_VOODOO)
@@ -1129,15 +1140,8 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
               </>
             ) : (
               <div className="card text-center space-y-6">
-                <h2 className="text-2xl font-bold">Sua Vez, {playersInPlayerActionsStep[currentPlayerIndex].name}</h2>
-                <p className="text-lg">Você dorme um sono profundo.</p>
-                <p className="text-dark-300">Passe o dispositivo para o próximo jogador.</p>
-                <button
-                  onClick={advanceToNextPlayerOrStep}
-                  className="btn-primary text-lg px-8 py-4"
-                >
-                  Continuar
-                </button>
+                <h2 className="text-2xl font-bold">Aguarde...</h2>
+                <p className="text-lg">Indo para o próximo jogador.</p>
               </div>
             )}
           </>
