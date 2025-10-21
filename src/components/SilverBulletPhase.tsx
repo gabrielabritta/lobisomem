@@ -39,9 +39,6 @@ export default function SilverBulletPhase({
     }
   }
 
-  const handleSkip = () => {
-    onShoot('')
-  }
 
   const getTriggerText = () => {
     return trigger === 'night_death' 
@@ -76,7 +73,7 @@ export default function SilverBulletPhase({
               </p>
             </div>
             <button
-              onClick={handleSkip}
+              onClick={() => onShoot('')}
               className="btn-primary"
             >
               ⏭️ Continuar
@@ -109,13 +106,7 @@ export default function SilverBulletPhase({
               ))}
             </div>
 
-            <div className="flex justify-center space-x-4">
-              <button
-                onClick={handleSkip}
-                className="btn-secondary"
-              >
-                ⏭️ Não Atirar
-              </button>
+            <div className="flex justify-center">
               <button
                 onClick={handleShoot}
                 disabled={!selectedTarget}

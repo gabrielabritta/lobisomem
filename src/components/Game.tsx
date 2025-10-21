@@ -26,50 +26,11 @@ export default function Game({ gameState, onGameReset }: GameProps) {
   const [showGameStatus, setShowGameStatus] = useState(false)
 
   const handleDistributionComplete = () => {
-    if (currentGameState.config.debugMode) {
-      let updatedPlayers = [...currentGameState.players];
-
-      const occultPlayer = updatedPlayers.find(p => p.character === CharacterClass.OCCULT);
-      if (occultPlayer) {
-        const possibleTargets = updatedPlayers.filter(p => p.id !== occultPlayer.id);
-        if (possibleTargets.length > 0) {
-          const target = possibleTargets[Math.floor(Math.random() * possibleTargets.length)];
-          updatedPlayers = updatedPlayers.map(p => 
-            p.id === occultPlayer.id 
-              ? { ...p, originalCharacter: p.character, character: target.character, team: target.team } 
-              : p
-          );
-        }
-      }
-
-      const cupidPlayer = updatedPlayers.find(p => p.character === CharacterClass.CUPIDO);
-      if (cupidPlayer) {
-        const possibleLovers = updatedPlayers.filter(p => p.id !== cupidPlayer.id);
-        if (possibleLovers.length >= 2) {
-          const lover1Index = Math.floor(Math.random() * possibleLovers.length);
-          const lover1 = possibleLovers[lover1Index];
-          possibleLovers.splice(lover1Index, 1);
-          const lover2 = possibleLovers[Math.floor(Math.random() * possibleLovers.length)];
-
-          updatedPlayers = updatedPlayers.map(p => {
-            if (p.id === lover1.id) {
-              return { ...p, isInLove: true, lovePartnerId: lover2.id };
-            }
-            if (p.id === lover2.id) {
-              return { ...p, isInLove: true, lovePartnerId: lover1.id };
-            }
-            return p;
-          });
-        }
-      }
-
-      handleInitialActionsComplete(updatedPlayers);
-    } else {
-      setCurrentGameState(prev => ({
-        ...prev,
-        currentPhase: GamePhase.SETUP // Mover para ações iniciais
-      }))
-    }
+    // Modo debug apenas pula a revelação das classes, mas mantém as ações iniciais
+    setCurrentGameState(prev => ({
+      ...prev,
+      currentPhase: GamePhase.SETUP // Mover para ações iniciais (tanto no modo normal quanto debug)
+    }))
   }
 
   const handleInitialActionsComplete = (updatedPlayers: Player[]) => {

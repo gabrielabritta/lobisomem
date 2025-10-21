@@ -7,13 +7,21 @@ interface InitialActionsProps {
 }
 
 export default function InitialActions({ players, onActionsComplete }: InitialActionsProps) {
-  const [currentAction, setCurrentAction] = useState<'occult' | 'cupid' | 'complete'>('occult')
   const [occultPlayer, setOccultPlayer] = useState<Player | null>(
     players.find(p => p.character === CharacterClass.OCCULT) || null
   )
   const [cupidPlayer, setCupidPlayer] = useState<Player | null>(
     players.find(p => p.character === CharacterClass.CUPIDO) || null
   )
+  
+  // Determinar a ação inicial baseada nos jogadores disponíveis
+  const getInitialAction = (): 'occult' | 'cupid' | 'complete' => {
+    if (occultPlayer) return 'occult'
+    if (cupidPlayer) return 'cupid'
+    return 'complete'
+  }
+  
+  const [currentAction, setCurrentAction] = useState<'occult' | 'cupid' | 'complete'>(getInitialAction())
   const [selectedTarget, setSelectedTarget] = useState<string>('')
   const [selectedLovers, setSelectedLovers] = useState<string[]>([])
   const [updatedPlayers, setUpdatedPlayers] = useState<Player[]>(players)
@@ -145,23 +153,25 @@ export default function InitialActions({ players, onActionsComplete }: InitialAc
             </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {players.map(player => (
-                <button
-                  key={player.id}
-                  onClick={() => toggleLoverSelection(player.id)}
-                  disabled={!selectedLovers.includes(player.id) && selectedLovers.length >= 2}
-                  className={`p-4 rounded-lg border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                    selectedLovers.includes(player.id)
-                      ? 'bg-pink-600 border-pink-500'
-                      : 'bg-dark-700 border-dark-600 hover:bg-dark-600'
-                  }`}
-                >
-                  <div className="font-medium">{player.name}</div>
-                  <div className="text-sm text-dark-300 mt-1">
-                    {selectedLovers.includes(player.id) ? '💕 Apaixonado' : 'Selecionar'}
-                  </div>
-                </button>
-              ))}
+              {players
+                .filter(p => p.id !== cupidPlayer?.id) // Cupido não pode se apaixonar
+                .map(player => (
+                  <button
+                    key={player.id}
+                    onClick={() => toggleLoverSelection(player.id)}
+                    disabled={!selectedLovers.includes(player.id) && selectedLovers.length >= 2}
+                    className={`p-4 rounded-lg border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                      selectedLovers.includes(player.id)
+                        ? 'bg-pink-600 border-pink-500'
+                        : 'bg-dark-700 border-dark-600 hover:bg-dark-600'
+                    }`}
+                  >
+                    <div className="font-medium">{player.name}</div>
+                    <div className="text-sm text-dark-300 mt-1">
+                      {selectedLovers.includes(player.id) ? '💕 Apaixonado' : 'Selecionar'}
+                    </div>
+                  </button>
+                ))}
             </div>
 
             <div className="text-center">
