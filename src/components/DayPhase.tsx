@@ -15,13 +15,13 @@ interface DayPhaseProps {
   onDayComplete: (expelledPlayerId?: string, newMayorId?: string, updatedPlayers?: Player[]) => void
 }
 
-type DayStep =
+type DayStep = 
   | 'deaths_announcement'
   | 'discussion'
   | 'mayor_voting'
   | 'mayor_result'
   | 'expulsion_voting'
-  | 'pass_device'
+  | 'mayor_tie_break'
   | 'expulsion_result'
   | 'complete'
 
@@ -41,7 +41,7 @@ export default function DayPhase({
   const [votes, setVotes] = useState<{ [playerId: string]: string }>({})
   const [newMayorId] = useState<string>(mayorId || '')
   const [showVotes] = useState(!config.expulsionVotingAnonymous)
-  const [votingResult, setVotingResult] = useState<{ winner: string | null, tied: boolean, tiedPlayers: string[] } | null>(null)
+  const [votingResult, setVotingResult] = useState<{ winner: string | null, tied: boolean, tiedPlayers: string[], mayorDecided?: boolean } | null>(null)
 
   const alivePlayers = players.filter(p => p.isAlive)
   const currentVoter = alivePlayers[currentVoterIndex]
@@ -74,25 +74,40 @@ export default function DayPhase({
   }
 
   const handleVote = (targetId: string) => {
-    const newVotes = { ...votes, [currentVoter.id]: targetId }
-    setVotes(newVotes)
+    const newVotes = { ...votes, [currentVoter.id]: targetId };
+    setVotes(newVotes);
 
     if (currentVoterIndex < alivePlayers.length - 1) {
-      setCurrentStep('pass_device')
+        setCurrentVoterIndex(prev => prev + 1);
     } else {
-      // Processar resultado da votação
-      const result = processVotes(newVotes)
+        const result = processVotes(newVotes);
 
-      // Votação de expulsão
-      setVotingResult(result)
-      setCurrentStep('expulsion_result')
+        if (result.tied && currentMayor) {
+            // Tie occurred and there is a mayor, go to tie break step
+            setVotingResult(result);
+            setCurrentStep('mayor_tie_break');
+        } else if (result.tied) {
+            // Tie occurred but NO mayor, fallback to random
+            const randomIndex = Math.floor(Math.random() * result.tiedPlayers.length);
+            const winner = result.tiedPlayers[randomIndex];
+            setVotingResult({ ...result, winner });
+            setCurrentStep('expulsion_result');
+        } else {
+            // Normal result (win or no expulsion)
+            setVotingResult(result);
+            setCurrentStep('expulsion_result');
+        }
     }
-  }
+};
 
-  const handleContinueFromPassDevice = () => {
-    setCurrentVoterIndex(prev => prev + 1)
-    setCurrentStep('expulsion_voting')
-  }
+const handleMayorTieChoice = (expelledPlayerId: string) => {
+    setVotingResult(prevResult => ({
+        ...(prevResult!),
+        winner: expelledPlayerId,
+        mayorDecided: true 
+    }));
+    setCurrentStep('expulsion_result');
+};
 
 
 
@@ -115,20 +130,26 @@ export default function DayPhase({
   const getVotingResultText = () => {
     if (!votingResult) return ''
 
-    if (votingResult.tied) {
-      return `Empate entre: ${votingResult.tiedPlayers.map(id => {
-        const player = players.find(p => p.id === id)
-        return player ? player.name : 'Desconhecido'
-      }).join(', ')}. Sorteio: ${(() => {
-        const winner = players.find(p => p.id === votingResult.winner)
-        return winner ? winner.name : 'Desconhecido'
-      })()}`
-    } else if (votingResult.winner) {
-      const winner = players.find(p => p.id === votingResult.winner)
-      return winner ? winner.name : 'Desconhecido'
+    if (votingResult.mayorDecided) {
+        const winner = players.find(p => p.id === votingResult.winner);
+        return `${winner ? winner.name : 'Desconhecido'} (decisão do Prefeito)`
     }
-    return 'Nenhum vencedor'
-  }
+
+    if (votingResult.tied) {
+        // This text is now for the random fallback
+        return `Empate entre: ${votingResult.tiedPlayers.map(id => {
+            const player = players.find(p => p.id === id);
+            return player ? player.name : 'Desconhecido';
+        }).join(', ')}. Sorteio: ${(() => {
+            const winner = players.find(p => p.id === votingResult.winner);
+            return winner ? winner.name : 'Desconhecido';
+        })()}`;
+    } else if (votingResult.winner) {
+        const winner = players.find(p => p.id === votingResult.winner);
+        return winner ? winner.name : 'Desconhecido';
+    }
+    return 'Ninguém foi expulso'; // Changed for clarity
+};
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -246,12 +267,7 @@ export default function DayPhase({
           </div>
         )}
 
-        {currentStep === 'pass_device' && (
-          <PassDeviceScreen
-            nextPlayerName={alivePlayers[currentVoterIndex + 1].name}
-            onContinue={handleContinueFromPassDevice}
-          />
-        )}
+
 
 
         {currentStep === 'expulsion_voting' && (
@@ -319,6 +335,34 @@ export default function DayPhase({
           </div>
         )}
 
+        {currentStep === 'mayor_tie_break' && (
+    <div className="space-y-6 text-center">
+        <h3 className="text-2xl font-bold">⚖️ Votação Empatada!</h3>
+        <p className="text-dark-300">
+            A votação terminou em empate. O Prefeito, <span className="font-semibold text-primary-400">{currentMayor?.name}</span>, deve dar o voto de minerva.
+        </p>
+        <p className="text-dark-300">Prefeito, escolha quem será expulso:</p>
+        <div className="bg-dark-700 rounded-lg p-4">
+            <h4 className="font-semibold mb-3">Jogadores Empatados:</h4>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {votingResult?.tiedPlayers.map(playerId => {
+                    const player = players.find(p => p.id === playerId);
+                    return player ? (
+                        <button
+                            key={player.id}
+                            onClick={() => handleMayorTieChoice(player.id)}
+                            className="p-4 rounded-lg border bg-red-900/50 border-red-700 hover:bg-red-800/50 transition-all"
+                        >
+                            <div className="font-medium">{player.name}</div>
+                            <div className="text-sm text-red-300 mt-1">Expulsar</div>
+                        </button>
+                    ) : null;
+                })}
+            </div>
+        </div>
+    </div>
+)}
+
         {currentStep === 'expulsion_result' && (
           <div className="space-y-6 text-center">
             <div className="text-6xl">🗳️</div>
@@ -335,7 +379,7 @@ export default function DayPhase({
               )}
               {votingResult?.tied && (
                 <p className="text-sm text-red-300 mt-2">
-                  Houve um empate e o vencedor foi sorteado.
+                  {votingResult.mayorDecided ? 'O Prefeito desempatou a votação.' : 'Houve um empate e o vencedor foi sorteado.'}
                 </p>
               )}
             </div>

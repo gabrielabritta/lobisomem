@@ -262,28 +262,38 @@ export function processVotes(votes: { [playerId: string]: string }): {
 } {
   const voteCount: { [targetId: string]: number } = {};
 
-  // Contar votos
+  // Count all votes
   Object.values(votes).forEach(targetId => {
-    if (targetId !== 'no_expulsion') {
-      voteCount[targetId] = (voteCount[targetId] || 0) + 1;
-    }
+    voteCount[targetId] = (voteCount[targetId] || 0) + 1;
   });
 
   if (Object.keys(voteCount).length === 0) {
     return { winner: null, tied: false, tiedPlayers: [] };
   }
 
-  // Encontrar maior número de votos
+  // Find the highest vote count
   const maxVotes = Math.max(...Object.values(voteCount));
+  
+  // Get all candidates (players and 'no_expulsion') with the highest vote count
   const topCandidates = Object.keys(voteCount).filter(id => voteCount[id] === maxVotes);
 
+  // Get the number of votes for 'no_expulsion', defaulting to 0
+  const noExpulsionVotes = voteCount['no_expulsion'] || 0;
+
+  // If 'no_expulsion' has the most votes (or is tied for the most), nobody is expelled.
+  if (noExpulsionVotes === maxVotes) {
+    return { winner: null, tied: false, tiedPlayers: [] };
+  }
+
+  // If we reach here, 'no_expulsion' did not have the most votes.
+  // The winner must be a player.
   if (topCandidates.length === 1) {
+    // A single player had the most votes.
     return { winner: topCandidates[0], tied: false, tiedPlayers: [] };
   } else {
-    // Empate - sortear entre os empatados
-    const randomIndex = Math.floor(Math.random() * topCandidates.length);
+    // A tie between two or more players. Return the tied players and let the caller handle it.
     return {
-      winner: topCandidates[randomIndex],
+      winner: null, // No winner yet
       tied: true,
       tiedPlayers: topCandidates
     };

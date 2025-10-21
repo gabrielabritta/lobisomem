@@ -65,11 +65,6 @@ export default function SilverBulletPhase({
             <p className="text-lg text-red-300">
               <strong>{silverBulletPlayer.name}</strong> {getTriggerText()} e agora pode atirar em alguém!
             </p>
-            <p className="text-sm text-red-200 mt-2">
-              {config.silverBulletIgnoresTalisman 
-                ? '⚠️ Este tiro ignora a proteção do Talismã' 
-                : 'Este tiro pode ser bloqueado pelo Talismã'}
-            </p>
           </div>
         </div>
 
@@ -108,7 +103,7 @@ export default function SilverBulletPhase({
                 >
                   <div className="font-medium">{player.name}</div>
                   <div className="text-sm text-dark-300 mt-1">
-                    {CHARACTER_NAMES[player.character]}
+                    Alvejar
                   </div>
                 </button>
               ))}
