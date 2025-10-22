@@ -3,6 +3,7 @@ import type { Player, GameAction, GameState, WitchPotions } from '../types/game'
 import { ActionType, CharacterClass, CHARACTER_NAMES } from '../types/game'
 import { isWerewolf } from '../utils/gameUtils'
 import PassDeviceScreen from './PassDeviceScreen'
+import MasterPassScreen from './MasterPassScreen'
 
 interface WitchInterfaceProps {
   witch: Player
@@ -661,6 +662,7 @@ type NightStep =
   | 'player_actions'
   | 'pass_device'
   | 'witch'
+  | 'master_pass'
   | 'complete'
 
 interface NightPhaseProps {
@@ -738,7 +740,7 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
     } else if (witch) {
       setCurrentStep('witch')
     } else {
-      setCurrentStep('complete')
+      setCurrentStep('master_pass')
     }
   }
 
@@ -921,6 +923,10 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
     }
 
     setSelectedTarget('')
+    setCurrentStep('master_pass')
+  }
+
+  const handleMasterPassContinue = () => {
     setCurrentStep('complete')
   }
 
@@ -1216,6 +1222,12 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
             players={alivePlayers}
             witchPotions={updatedWitchPotions}
             onWitchAction={handleWitchAction}
+          />
+        )}
+
+        {currentStep === 'master_pass' && (
+          <MasterPassScreen
+            onContinue={handleMasterPassContinue}
           />
         )}
 
