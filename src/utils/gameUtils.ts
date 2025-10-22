@@ -137,13 +137,35 @@ function checkCupidVictory(alivePlayers: Player[], cupidPlayer: Player | undefin
 }
 
 // Função para obter os vencedores do Cupido (Cupido + apaixonados vivos)
-function getCupidWinners(alivePlayers: Player[], cupidPlayer: Player | undefined): string[] {
-  if (!cupidPlayer) return [];
+function getCupidWinners(
+  alivePlayers: Player[], 
+  cupidPlayer: Player | undefined, 
+  winningTeam: Team,
+  existingWinners: string[]
+): { cupidWinners: string[], loversInWinningTeam: string[], loversNotInWinningTeam: string[] } {
+  if (!cupidPlayer) return { cupidWinners: [], loversInWinningTeam: [], loversNotInWinningTeam: [] };
   const loversAlive = alivePlayers.filter(p => p.isInLove);
-  if (loversAlive.length === 2) {
-    return [cupidPlayer.id, ...loversAlive.map(p => p.id)];
-  }
-  return [];
+  
+  if (loversAlive.length !== 2) return { cupidWinners: [], loversInWinningTeam: [], loversNotInWinningTeam: [] };
+  
+  // Verificar se pelo menos um dos apaixonados está no time vencedor
+  const hasWinnerInLovers = loversAlive.some(lover => lover.team === winningTeam);
+  
+  if (!hasWinnerInLovers) return { cupidWinners: [], loversInWinningTeam: [], loversNotInWinningTeam: [] };
+  
+  // Separar apaixonados por time (apenas os que não estão já na lista de vencedores)
+  const loversInWinningTeam = loversAlive
+    .filter(lover => lover.team === winningTeam && !existingWinners.includes(lover.id))
+    .map(lover => lover.id);
+  
+  const loversNotInWinningTeam = loversAlive
+    .filter(lover => lover.team !== winningTeam && !existingWinners.includes(lover.id))
+    .map(lover => lover.id);
+  
+  // Cupido sempre vence se há pelo menos um apaixonado no time vencedor
+  const cupidWinners = existingWinners.includes(cupidPlayer.id) ? [] : [cupidPlayer.id];
+  
+  return { cupidWinners, loversInWinningTeam, loversNotInWinningTeam };
 }
 
 // Função para verificar condições de vitória
@@ -189,9 +211,17 @@ export function checkVictoryConditions(gameState: GameState): {
     
     let winners = [aliveVampire.id];
     
-    // Adicionar vencedores do Cupido (Cupido + apaixonados vivos)
-    const cupidWinners = getCupidWinners(alivePlayers, cupidPlayer);
-    winners.push(...cupidWinners);
+    // Adicionar vencedores do Cupido na ordem correta
+    const cupidData = getCupidWinners(alivePlayers, cupidPlayer, Team.EVIL, winners);
+    
+    // Adicionar apaixonados do time vencedor no final da lista do time vencedor
+    winners.push(...cupidData.loversInWinningTeam);
+    
+    // Adicionar apaixonados que não são do time vencedor
+    winners.push(...cupidData.loversNotInWinningTeam);
+    
+    // Adicionar Cupido por último
+    winners.push(...cupidData.cupidWinners);
     
     return {
       hasWinner: true,
@@ -210,9 +240,17 @@ export function checkVictoryConditions(gameState: GameState): {
 
     let winners = [...werewolfIds, ...traitorIds];
     
-    // Adicionar vencedores do Cupido (Cupido + apaixonados vivos)
-    const cupidWinners = getCupidWinners(alivePlayers, cupidPlayer);
-    winners.push(...cupidWinners);
+    // Adicionar vencedores do Cupido na ordem correta
+    const cupidData = getCupidWinners(alivePlayers, cupidPlayer, Team.EVIL, winners);
+    
+    // Adicionar apaixonados do time vencedor no final da lista do time vencedor
+    winners.push(...cupidData.loversInWinningTeam);
+    
+    // Adicionar apaixonados que não são do time vencedor
+    winners.push(...cupidData.loversNotInWinningTeam);
+    
+    // Adicionar Cupido por último
+    winners.push(...cupidData.cupidWinners);
 
     return {
       hasWinner: true,
@@ -226,9 +264,17 @@ export function checkVictoryConditions(gameState: GameState): {
   if (aliveWerewolves.length === 0 && !aliveVampire && !aliveZombie) {
     let winners = aliveGood.map(p => p.id);
     
-    // Adicionar vencedores do Cupido (Cupido + apaixonados vivos)
-    const cupidWinners = getCupidWinners(alivePlayers, cupidPlayer);
-    winners.push(...cupidWinners);
+    // Adicionar vencedores do Cupido na ordem correta
+    const cupidData = getCupidWinners(alivePlayers, cupidPlayer, Team.GOOD, winners);
+    
+    // Adicionar apaixonados do time vencedor no final da lista do time vencedor
+    winners.push(...cupidData.loversInWinningTeam);
+    
+    // Adicionar apaixonados que não são do time vencedor
+    winners.push(...cupidData.loversNotInWinningTeam);
+    
+    // Adicionar Cupido por último
+    winners.push(...cupidData.cupidWinners);
     
     return {
       hasWinner: true,

@@ -402,15 +402,17 @@ export default function Game({ gameState, onGameReset }: GameProps) {
                 </h4>
 
                 <div className="space-y-2">
-                  <p className="font-semibold">Vencedores:</p>
-                  {currentGameState.winners.map(winnerId => {
-                    const winner = currentGameState.players.find(p => p.id === winnerId)
-                    return winner ? (
-                      <div key={winnerId} className="text-lg">
-                        🏆 {winner.name} - {CHARACTER_NAMES[winner.character]}
-                      </div>
-                    ) : null
-                  })}
+                  <p className="font-semibold text-center">Vencedores:</p>
+                  <div className="text-left">
+                    {currentGameState.winners.map(winnerId => {
+                      const winner = currentGameState.players.find(p => p.id === winnerId)
+                      return winner ? (
+                        <div key={winnerId} className="text-lg">
+                          🏆 {winner.name} - {CHARACTER_NAMES[winner.character]}{winner.isInLove ? ' (💕 Apaixonado)' : ''}
+                        </div>
+                      ) : null
+                    })}
+                  </div>
                 </div>
               </div>
             )}
