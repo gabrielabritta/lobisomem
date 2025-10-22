@@ -12,14 +12,16 @@ interface DayPhaseProps {
   deadToday: string[]
   nightMessages: string[]
   investigations: { [playerId: string]: any }
+  needsMayorReelection?: boolean
+  previousMayorName?: string
   onDayComplete: (expelledPlayerId?: string, newMayorId?: string, updatedPlayers?: Player[]) => void
 }
 
 type DayStep = 
   | 'deaths_announcement'
   | 'discussion'
-  | 'mayor_voting'
-  | 'mayor_result'
+  | 'mayor_reelection'
+  | 'mayor_reelection_result'
   | 'expulsion_voting'
   | 'mayor_tie_break'
   | 'expulsion_result'
@@ -33,15 +35,22 @@ export default function DayPhase({
   deadToday,
   nightMessages,
   investigations,
+  needsMayorReelection = false,
+  previousMayorName = '',
   onDayComplete
 }: DayPhaseProps) {
   const [currentStep, setCurrentStep] = useState<DayStep>('deaths_announcement')
   const [discussionTimeLeft, setDiscussionTimeLeft] = useState(config.discussionTime * 60)
   const [currentVoterIndex, setCurrentVoterIndex] = useState(0)
   const [votes, setVotes] = useState<{ [playerId: string]: string }>({})
-  const [newMayorId] = useState<string>(mayorId || '')
+  const [newMayorId, setNewMayorId] = useState<string>(mayorId || '')
   const [showVotes] = useState(!config.expulsionVotingAnonymous)
   const [votingResult, setVotingResult] = useState<{ winner: string | null, tied: boolean, tiedPlayers: string[], mayorDecided?: boolean } | null>(null)
+  
+  // Estados para votação de reeleição do prefeito
+  const [mayorReelectionVotes, setMayorReelectionVotes] = useState<{ [playerId: string]: string }>({})
+  const [mayorReelectionVoterIndex, setMayorReelectionVoterIndex] = useState(0)
+  const [mayorReelectionResult, setMayorReelectionResult] = useState<{ winner: string | null, tied: boolean, tiedPlayers: string[] } | null>(null)
 
   const alivePlayers = players.filter(p => p.isAlive)
   const currentVoter = alivePlayers[currentVoterIndex]
@@ -54,10 +63,15 @@ export default function DayPhase({
         setDiscussionTimeLeft(prev => prev - 1)
       }, 1000)
       return () => clearTimeout(timer)
-            } else if (currentStep === 'discussion' && discussionTimeLeft === 0) {
-      setCurrentStep('expulsion_voting')
+    } else if (currentStep === 'discussion' && discussionTimeLeft === 0) {
+      // Após a discussão, verificar se precisa de reeleição do prefeito
+      if (needsMayorReelection) {
+        setCurrentStep('mayor_reelection')
+      } else {
+        setCurrentStep('expulsion_voting')
+      }
     }
-  }, [currentStep, discussionTimeLeft])
+  }, [currentStep, discussionTimeLeft, needsMayorReelection])
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -71,6 +85,28 @@ export default function DayPhase({
 
   const handleSkipDiscussion = () => {
     setDiscussionTimeLeft(0)
+  }
+
+  // Funções para votação de reeleição do prefeito
+  const handleMayorReelectionVote = (targetId: string) => {
+    const newVotes = { ...mayorReelectionVotes, [alivePlayers[mayorReelectionVoterIndex].id]: targetId }
+    setMayorReelectionVotes(newVotes)
+
+    if (mayorReelectionVoterIndex < alivePlayers.length - 1) {
+      setMayorReelectionVoterIndex(prev => prev + 1)
+    } else {
+      // Processar resultado da votação de reeleição
+      const result = processVotes(newVotes)
+      setMayorReelectionResult(result)
+      setCurrentStep('mayor_reelection_result')
+    }
+  }
+
+  const handleMayorReelectionComplete = () => {
+    if (mayorReelectionResult?.winner) {
+      setNewMayorId(mayorReelectionResult.winner)
+    }
+    setCurrentStep('expulsion_voting')
   }
 
   const handleVote = (targetId: string) => {
@@ -112,7 +148,7 @@ const handleMayorTieChoice = (expelledPlayerId: string) => {
 
 
   const handleExpulsionResultContinue = () => {
-    onDayComplete(votingResult?.winner || undefined, newMayorId, players)
+    onDayComplete(votingResult?.winner || undefined, newMayorId || mayorId, players)
   }
 
   const getPlayerInvestigationResult = (playerId: string) => {
@@ -150,6 +186,24 @@ const handleMayorTieChoice = (expelledPlayerId: string) => {
     }
     return 'Ninguém foi expulso'; // Changed for clarity
 };
+
+  const getMayorReelectionResultText = () => {
+    if (!mayorReelectionResult) return ''
+
+    if (mayorReelectionResult.tied) {
+      return `Empate entre: ${mayorReelectionResult.tiedPlayers.map(id => {
+        const player = players.find(p => p.id === id)
+        return player ? player.name : 'Desconhecido'
+      }).join(', ')}. Sorteio: ${(() => {
+        const winner = players.find(p => p.id === mayorReelectionResult.winner)
+        return winner ? winner.name : 'Desconhecido'
+      })()}`
+    } else if (mayorReelectionResult.winner) {
+      const winner = players.find(p => p.id === mayorReelectionResult.winner)
+      return winner ? winner.name : 'Desconhecido'
+    }
+    return 'Nenhum vencedor'
+  }
 
   // Função para detectar mortes por amor quando um jogador é expulso
   const getLoveDeaths = (expelledPlayerId: string) => {
@@ -282,8 +336,99 @@ const handleMayorTieChoice = (expelledPlayerId: string) => {
           </div>
         )}
 
+        {currentStep === 'mayor_reelection' && (
+          <div className="space-y-6">
+            <div className="text-center">
+              <h3 className="text-xl font-semibold mb-4">👑 Nova Eleição de Prefeito</h3>
+              <p className="text-dark-300 mb-4">
+                O prefeito <span className="text-red-400 font-semibold">{previousMayorName}</span> morreu ou foi expulso.
+              </p>
+              <p className="text-dark-300 mb-4">
+                Vocês devem eleger um novo prefeito antes de continuar.
+              </p>
+              <p className="text-dark-300 mb-4">
+                Vez de: <span className="text-primary-400 font-semibold">{alivePlayers[mayorReelectionVoterIndex].name}</span>
+              </p>
+              <div className="text-sm text-dark-400">
+                Votação {mayorReelectionVoterIndex + 1} de {alivePlayers.length}
+              </div>
+            </div>
 
+            {/* Mostrar votos até agora (se não for anônimo) */}
+            {!config.mayorVotingAnonymous && Object.keys(mayorReelectionVotes).length > 0 && (
+              <div className="bg-dark-700 rounded-lg p-4">
+                <h4 className="font-semibold mb-2">📊 Votos até agora:</h4>
+                <div className="grid md:grid-cols-2 gap-2 text-sm">
+                  {Object.entries(mayorReelectionVotes).map(([voterId, targetId]) => {
+                    const voter = players.find(p => p.id === voterId)
+                    const target = players.find(p => p.id === targetId)
+                    return (
+                      <div key={voterId} className="text-dark-300">
+                        {voter?.name} → {target?.name}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {alivePlayers.map(player => (
+                <button
+                  key={player.id}
+                  onClick={() => handleMayorReelectionVote(player.id)}
+                  className="p-4 rounded-lg border bg-dark-700 border-dark-600 hover:bg-dark-600 transition-all"
+                >
+                  <div className="font-medium">{player.name}</div>
+                  <div className="text-sm text-dark-300 mt-1">
+                    Eleger Prefeito
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {currentStep === 'mayor_reelection_result' && (
+          <div className="space-y-6 text-center">
+            <div className="text-6xl">👑</div>
+            <h2 className="text-2xl font-bold">Nova Eleição de Prefeito</h2>
+            
+            <div className="bg-primary-900/30 border border-primary-700 rounded-lg p-6">
+              <p className="text-lg">
+                <strong>Novo Prefeito Eleito:</strong> {getMayorReelectionResultText()}
+              </p>
+              {mayorReelectionResult?.tied && (
+                <p className="text-sm text-primary-300 mt-2">
+                  Houve um empate e o vencedor foi sorteado.
+                </p>
+              )}
+            </div>
+
+            {/* Mostrar detalhes da votação */}
+            <div className="bg-dark-700 rounded-lg p-4">
+              <h4 className="font-semibold mb-3">📊 Detalhes da Votação:</h4>
+              <div className="grid md:grid-cols-2 gap-2 text-sm">
+                {Object.entries(mayorReelectionVotes).map(([voterId, targetId]) => {
+                  const voter = players.find(p => p.id === voterId)
+                  const target = players.find(p => p.id === targetId)
+                  return (
+                    <div key={voterId} className="text-dark-300">
+                      {voter?.name} → {target?.name}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            <button
+              onClick={handleMayorReelectionComplete}
+              className="btn-primary"
+            >
+              Continuar para Votação de Expulsão
+            </button>
+          </div>
+        )}
 
         {currentStep === 'expulsion_voting' && (
           <div className="space-y-6">

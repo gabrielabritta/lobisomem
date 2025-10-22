@@ -50,6 +50,22 @@ export default function Game({ gameState, onGameReset }: GameProps) {
     }))
   }
 
+
+  // Função para verificar se o prefeito morreu ou foi expulso
+  const checkMayorStatus = (players: Player[], mayorId?: string) => {
+    if (!mayorId) return { needsReelection: false, previousMayorName: '' }
+    
+    const mayor = players.find(p => p.id === mayorId)
+    if (!mayor || !mayor.isAlive) {
+      return { 
+        needsReelection: true, 
+        previousMayorName: mayor?.name || 'Prefeito Anterior' 
+      }
+    }
+    
+    return { needsReelection: false, previousMayorName: '' }
+  }
+
   const handleNightComplete = (actions: GameAction[], updatedPlayers: Player[], updatedGameState?: Partial<GameState>) => {
     // Resolver ações da noite
     const results = resolveNightActions(updatedPlayers, actions)
@@ -85,6 +101,9 @@ export default function Game({ gameState, onGameReset }: GameProps) {
     const deadSilverBullet = results.deadPlayers
       .map(id => finalPlayers.find(p => p.id === id))
       .find(p => p && p.character === CharacterClass.BALA_DE_PRATA && currentGameState.config.silverBulletKillsWhenDead)
+
+    // Verificar se o prefeito morreu durante a noite
+    const mayorStatus = checkMayorStatus(finalPlayers, currentGameState.mayorId)
 
     const nextPhase = victoryCheck.hasWinner 
       ? GamePhase.ENDED 
@@ -152,6 +171,9 @@ export default function Game({ gameState, onGameReset }: GameProps) {
     const expelledSilverBullet = expelledPlayerId 
       ? finalPlayers.find(p => p.id === expelledPlayerId && p.character === CharacterClass.BALA_DE_PRATA)
       : null
+
+    // Verificar se o prefeito foi expulso
+    const mayorStatus = checkMayorStatus(finalPlayers, currentGameState.mayorId)
 
     const shouldShowSilverBulletPhase = expelledSilverBullet && currentGameState.config.silverBulletKillsWhenExpelled
 
@@ -304,6 +326,7 @@ export default function Game({ gameState, onGameReset }: GameProps) {
         />
       )}
 
+
       {currentGameState.currentPhase === GamePhase.NIGHT && (
         <NightPhase
           players={currentGameState.players}
@@ -338,6 +361,8 @@ export default function Game({ gameState, onGameReset }: GameProps) {
           deadToday={nightResults.deadPlayers}
           nightMessages={nightResults.messages}
           investigations={nightResults.investigations}
+          needsMayorReelection={checkMayorStatus(currentGameState.players, currentGameState.mayorId).needsReelection}
+          previousMayorName={checkMayorStatus(currentGameState.players, currentGameState.mayorId).previousMayorName}
           onDayComplete={handleDayComplete}
         />
       )}
