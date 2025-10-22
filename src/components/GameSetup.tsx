@@ -385,7 +385,7 @@ export default function GameSetup({ onGameStart }: GameSetupProps) {
                   onChange={(e) => setConfig(prev => ({ ...prev, debugMode: e.target.checked }))}
                   className="rounded"
                 />
-                <span className="text-sm">Modo Debug (pular revelação)</span>
+                <span className="text-sm">Modo Debug</span>
               </label>
             </div>
           )}

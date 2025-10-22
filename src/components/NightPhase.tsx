@@ -736,11 +736,22 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
 
   const advanceToNextPlayerOrStep = () => {
     if (currentPlayerIndex < playersInPlayerActionsStep.length - 1) {
-      setCurrentStep('pass_device')
+      // Skip PassDeviceScreen in debug mode
+      if (gameState?.config.debugMode) {
+        setCurrentPlayerIndex(prev => prev + 1)
+        setCurrentStep('player_actions')
+      } else {
+        setCurrentStep('pass_device')
+      }
     } else if (witch) {
       setCurrentStep('witch')
     } else {
-      setCurrentStep('master_pass')
+      // Skip MasterPassScreen in debug mode when no witch
+      if (gameState?.config.debugMode) {
+        setCurrentStep('complete')
+      } else {
+        setCurrentStep('master_pass')
+      }
     }
   }
 
@@ -766,7 +777,12 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
     } else if (witch) {
       setCurrentStep('witch')
     } else {
-      setCurrentStep('complete')
+      // Skip MasterPassScreen in debug mode when no witch
+      if (gameState?.config.debugMode) {
+        setCurrentStep('complete')
+      } else {
+        setCurrentStep('master_pass')
+      }
     }
   }
 
@@ -786,7 +802,12 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
     } else if (witch) {
       setCurrentStep('witch')
     } else {
-      setCurrentStep('complete')
+      // Skip MasterPassScreen in debug mode when no witch
+      if (gameState?.config.debugMode) {
+        setCurrentStep('complete')
+      } else {
+        setCurrentStep('master_pass')
+      }
     }
   }
 
@@ -923,7 +944,12 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
     }
 
     setSelectedTarget('')
-    setCurrentStep('master_pass')
+    // Skip MasterPassScreen in debug mode
+    if (gameState?.config.debugMode) {
+      setCurrentStep('complete')
+    } else {
+      setCurrentStep('master_pass')
+    }
   }
 
   const handleMasterPassContinue = () => {
