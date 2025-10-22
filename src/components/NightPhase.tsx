@@ -1093,7 +1093,16 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
 
                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
                           {alivePlayers
-                            .filter(p => p.id !== currentPlayer.id)
+                            .filter(p => {
+                              // Filtro básico: não pode ser o próprio jogador
+                              if (p.id === currentPlayer.id) return false
+                              
+                              // Se for zumbi, não pode infectar jogadores já infectados
+                              const character = currentPlayer.originalCharacter || currentPlayer.character
+                              if (character === CharacterClass.ZUMBI && p.isInfected) return false
+                              
+                              return true
+                            })
                             .map(player => (
                               <button
                                 key={player.id}
@@ -1106,7 +1115,16 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
                               >
                                 <div className="font-medium">{player.name}</div>
                                 <div className="text-sm text-dark-300 mt-1">
-                                  {player.isAlive ? 'Selecionar' : '💀 Morto'}
+                                  {player.isAlive 
+                                    ? (() => {
+                                        const character = currentPlayer.originalCharacter || currentPlayer.character
+                                        if (character === CharacterClass.ZUMBI && player.isInfected) {
+                                          return '🦠 Já Infectado'
+                                        }
+                                        return 'Selecionar'
+                                      })()
+                                    : '💀 Morto'
+                                  }
                                 </div>
                               </button>
                             ))}

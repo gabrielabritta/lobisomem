@@ -120,7 +120,7 @@ export function distributeCharacters(
       team: getCharacterTeam(character),
       isAlive: true,
       isSilenced: false,
-      isInfected: false,
+      isInfected: character === CharacterClass.ZUMBI, // Zumbi começa infectado
       hasProtection: character === CharacterClass.TALISMA,
       isInLove: false
     });

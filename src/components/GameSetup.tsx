@@ -145,11 +145,19 @@ export default function GameSetup({ onGameStart }: GameSetupProps) {
 
     const players = distributeCharacters(playerNames, config)
 
+    // Verificar se há jogadores que precisam de ações iniciais
+    const needsInitialActions = players.some(p => 
+      p.character === CharacterClass.CUPIDO || 
+      p.character === CharacterClass.OCCULT
+    );
+
     const gameState: GameState = {
       id: `game_${Date.now()}`,
       config,
       players,
-      currentPhase: config.debugMode ? GamePhase.MAYOR_VOTING : GamePhase.CHARACTER_DISTRIBUTION,
+      currentPhase: config.debugMode 
+        ? (needsInitialActions ? GamePhase.SETUP : GamePhase.MAYOR_VOTING)
+        : GamePhase.CHARACTER_DISTRIBUTION,
       currentNight: config.debugMode ? 1 : 0,
       currentDay: 0,
       actions: [],

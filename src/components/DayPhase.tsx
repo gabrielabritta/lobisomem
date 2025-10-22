@@ -151,6 +151,21 @@ const handleMayorTieChoice = (expelledPlayerId: string) => {
     return 'Ninguém foi expulso'; // Changed for clarity
 };
 
+  // Função para detectar mortes por amor quando um jogador é expulso
+  const getLoveDeaths = (expelledPlayerId: string) => {
+    const expelledPlayer = players.find(p => p.id === expelledPlayerId)
+    if (!expelledPlayer || !expelledPlayer.isInLove || !expelledPlayer.lovePartnerId) {
+      return []
+    }
+    
+    const lover = players.find(p => p.id === expelledPlayer.lovePartnerId)
+    if (!lover || !lover.isAlive) {
+      return []
+    }
+    
+    return [lover]
+  }
+
   return (
     <div className="max-w-4xl mx-auto">
       <div className="card">
@@ -383,6 +398,26 @@ const handleMayorTieChoice = (expelledPlayerId: string) => {
                 </p>
               )}
             </div>
+
+            {/* Mostrar mortes por amor - fora do retângulo vermelho */}
+            {votingResult?.winner && (() => {
+              const loveDeaths = getLoveDeaths(votingResult.winner!)
+              if (loveDeaths.length > 0) {
+                return (
+                  <div className="bg-pink-900/30 border border-pink-700 rounded-lg p-4">
+                    <p className="text-pink-200 text-sm mb-2">
+                      💕 <strong>Morte por Amor:</strong>
+                    </p>
+                    {loveDeaths.map(lover => (
+                      <p key={lover.id} className="text-pink-100">
+                        {lover.name} estava apaixonado(a) por {getVotingResultText()} e morreu de tristeza
+                      </p>
+                    ))}
+                  </div>
+                )
+              }
+              return null
+            })()}
 
             {/* Mostrar detalhes da votação */}
             <div className="bg-dark-700 rounded-lg p-4">

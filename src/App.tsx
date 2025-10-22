@@ -40,7 +40,7 @@ function App() {
           )}
         </header>
 
-        {!gameState || gameState.currentPhase === GamePhase.SETUP ? (
+        {!gameState ? (
           <GameSetup onGameStart={handleGameStart} />
         ) : (
           <Game gameState={gameState} onGameReset={handleGameReset} />
