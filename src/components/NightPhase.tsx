@@ -17,13 +17,47 @@ function WitchInterface({ witch, actions, players, witchPotions, onWitchAction }
   const [selectedAction, setSelectedAction] = useState<'heal' | 'poison' | null>(null)
   const [selectedTarget, setSelectedTarget] = useState<string>('')
 
-  // Determinar quem morrerá esta noite baseado nas ações
-  const killActions = actions.filter(a => a.type === ActionType.KILL || a.type === ActionType.POISON)
-  const dyingPlayers = killActions
-    .map(action => action.targetId)
-    .filter(Boolean)
-    .map(targetId => players.find(p => p.id === targetId))
-    .filter(Boolean) as Player[]
+  // Função para determinar quem realmente morrerá considerando proteções
+  const getActuallyDyingPlayers = (): Player[] => {
+    // Separar ações por tipo
+    const protections = actions.filter(a => a.type === ActionType.PROTECT)
+    const kills = actions.filter(a => a.type === ActionType.KILL || a.type === ActionType.POISON)
+    
+    // Criar conjunto de jogadores protegidos
+    const protectedPlayers = new Set<string>()
+    protections.forEach(action => {
+      if (action.targetId) {
+        protectedPlayers.add(action.targetId)
+      }
+    })
+    
+    // Determinar quem realmente morrerá
+    const actuallyDyingPlayers: Player[] = []
+    kills.forEach(action => {
+      if (action.targetId) {
+        const target = players.find(p => p.id === action.targetId)
+        if (target && target.isAlive) {
+          const isProtected = protectedPlayers.has(action.targetId)
+          const hasTalisman = target.hasProtection && target.character === CharacterClass.TALISMA
+          
+          // Verificar se é ação especial do lobisomem voodoo que ignora proteções
+          const isVoodooKill = action.data?.guessedClass && 
+            players.find(p => p.id === action.playerId)?.character === CharacterClass.LOBISOMEM_VOODOO
+          
+          // Só morre se:
+          // 1. Não estiver protegido E não tiver talismã (mortes normais)
+          // 2. OU for ação do voodoo que acertou a classe (ignora proteções)
+          if ((!isProtected && !hasTalisman) || isVoodooKill) {
+            actuallyDyingPlayers.push(target)
+          }
+        }
+      }
+    })
+    
+    return actuallyDyingPlayers
+  }
+
+  const dyingPlayers = getActuallyDyingPlayers()
 
   // A bruxa só pode ver quem vai morrer se tiver a poção de cura
   const canSeeDeaths = witchPotions.healingPotion
@@ -86,7 +120,13 @@ function WitchInterface({ witch, actions, players, witchPotions, onWitchAction }
         
         {canShowHealOption && (
           <button
-            onClick={() => setSelectedAction(selectedAction === 'heal' ? null : 'heal')}
+            onClick={() => {
+              if (dyingPlayers.length === 1) {
+                onWitchAction('heal', dyingPlayers[0].id)
+              } else {
+                setSelectedAction(selectedAction === 'heal' ? null : 'heal')
+              }
+            }}
             className={`btn-primary transition-all ${
               selectedAction === 'heal' 
                 ? 'bg-green-500 hover:bg-green-600' 
