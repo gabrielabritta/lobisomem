@@ -136,12 +136,15 @@ export function resolveNightActions(players: Player[], actions: GameAction[]): A
 
       deadPlayers.push(...loveDeath, ...bloodDeath)
 
-    } else if (hasTalisman) {
-      // Talismã perde sua proteção
+    } else if (hasTalisman && !isProtected) {
+      // Talismã perde sua proteção apenas se não estiver protegido pelo guardião
       updatedPlayers = updatedPlayers.map(p =>
         p.id === targetId ? { ...p, hasProtection: false } : p
       )
       messages.push(`${target.name} foi protegido por seu Talismã, mas o perdeu.`)
+    } else if (hasTalisman && isProtected) {
+      // Talismã mantém sua proteção quando protegido pelo guardião
+      messages.push(`${target.name} foi protegido pelo Guardião e manteve seu Talismã.`)
     }
   })
 
