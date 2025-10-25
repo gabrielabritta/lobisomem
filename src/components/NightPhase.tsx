@@ -85,12 +85,12 @@ function WitchInterface({ witch, actions, players, witchPotions, onWitchAction }
 
       {/* Mostrar quem morrerá esta noite - apenas se a bruxa tiver poção de cura */}
       {canSeeDeaths && dyingPlayers.length > 0 && (
-        <div className="bg-red-900/30 border border-red-700 rounded-lg p-4">
-          <h4 className="font-semibold mb-2 text-red-300">💀 Pessoas que morrerão esta noite:</h4>
-          <div className="space-y-1">
+        <div className="bg-red-900/30 border border-red-700 rounded-lg p-6">
+          <h4 className="font-semibold mb-4 text-red-300 text-lg">💀 Pessoas que morrerão esta noite:</h4>
+          <div className="space-y-3">
             {dyingPlayers.map(player => (
-              <div key={player.id} className="text-red-200">
-                • {player.name}
+              <div key={player.id} className="text-red-100 text-4xl font-bold text-center py-2">
+                {player.name}
               </div>
             ))}
           </div>
