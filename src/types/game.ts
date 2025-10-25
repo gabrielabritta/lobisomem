@@ -40,7 +40,6 @@ export enum GamePhase {
   DAY = 'day',
   VOTING = 'voting',
   SILVER_BULLET_DAY = 'silver_bullet_day', // Quando Bala de Prata é expulso durante o dia
-  MAYOR_REELECTION = 'mayor_reelection', // Nova eleição de prefeito quando o atual morre/é expulso
   ENDED = 'ended'
 }
 

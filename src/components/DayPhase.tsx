@@ -3,6 +3,7 @@ import type { Player, GameConfig } from '../types/game'
 import { CharacterClass, CHARACTER_NAMES } from '../types/game'
 import { processVotes } from '../utils/gameUtils'
 import PassDeviceScreen from './PassDeviceScreen'
+import SilverBulletPhase from './SilverBulletPhase'
 
 interface DayPhaseProps {
   players: Player[]
@@ -14,11 +15,14 @@ interface DayPhaseProps {
   investigations: { [playerId: string]: any }
   needsMayorReelection?: boolean
   previousMayorName?: string
+  pendingSilverBulletPlayer?: Player
   onDayComplete: (expelledPlayerId?: string, newMayorId?: string, updatedPlayers?: Player[]) => void
+  onSilverBulletShot?: (silverBulletPlayerId: string, targetId: string, trigger: 'night_death' | 'day_expulsion') => void
 }
 
 type DayStep = 
   | 'deaths_announcement'
+  | 'silver_bullet_shot'
   | 'discussion'
   | 'mayor_reelection'
   | 'mayor_reelection_result'
@@ -37,7 +41,9 @@ export default function DayPhase({
   investigations,
   needsMayorReelection = false,
   previousMayorName = '',
-  onDayComplete
+  pendingSilverBulletPlayer,
+  onDayComplete,
+  onSilverBulletShot
 }: DayPhaseProps) {
   const [currentStep, setCurrentStep] = useState<DayStep>('deaths_announcement')
   const [discussionTimeLeft, setDiscussionTimeLeft] = useState(config.discussionTime * 60)
@@ -80,6 +86,16 @@ export default function DayPhase({
   }
 
   const handleDeathsComplete = () => {
+    // Se há um Bala de Prata pendente, ir para a tela dele primeiro
+    if (pendingSilverBulletPlayer) {
+      setCurrentStep('silver_bullet_shot')
+    } else {
+      setCurrentStep('discussion')
+    }
+  }
+
+  const handleSilverBulletComplete = () => {
+    // Após o Bala de Prata atirar, continuar para a discussão
     setCurrentStep('discussion')
   }
 
@@ -293,10 +309,23 @@ const handleMayorTieChoice = (expelledPlayerId: string) => {
                 onClick={handleDeathsComplete}
                 className="btn-primary"
               >
-                💬 Iniciar Discussão
+                {pendingSilverBulletPlayer ? '⏭️ Continuar' : '💬 Iniciar Discussão'}
               </button>
             </div>
           </div>
+        )}
+
+        {currentStep === 'silver_bullet_shot' && pendingSilverBulletPlayer && onSilverBulletShot && (
+          <SilverBulletPhase
+            silverBulletPlayer={pendingSilverBulletPlayer}
+            alivePlayers={players.filter(p => p.isAlive)}
+            config={config}
+            trigger="night_death"
+            onShoot={(targetId) => {
+              onSilverBulletShot(pendingSilverBulletPlayer.id, targetId, 'night_death')
+              handleSilverBulletComplete()
+            }}
+          />
         )}
 
         {currentStep === 'discussion' && (
