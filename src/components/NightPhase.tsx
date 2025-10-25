@@ -701,6 +701,7 @@ type NightStep =
   | 'occult'
   | 'player_actions'
   | 'pass_device'
+  | 'master_pass_before_witch'
   | 'witch'
   | 'master_pass'
   | 'complete'
@@ -784,7 +785,12 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
         setCurrentStep('pass_device')
       }
     } else if (witch) {
-      setCurrentStep('witch')
+      // Novo comportamento: ir para master_pass_before_witch
+      if (gameState?.config.debugMode) {
+        setCurrentStep('witch')
+      } else {
+        setCurrentStep('master_pass_before_witch')
+      }
     } else {
       // Skip MasterPassScreen in debug mode when no witch
       if (gameState?.config.debugMode) {
@@ -984,12 +990,12 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
     }
 
     setSelectedTarget('')
-    // Skip MasterPassScreen in debug mode
-    if (gameState?.config.debugMode) {
-      setCurrentStep('complete')
-    } else {
-      setCurrentStep('master_pass')
-    }
+    // Ir direto para complete (remover master_pass)
+    setCurrentStep('complete')
+  }
+
+  const handleMasterPassBeforeWitch = () => {
+    setCurrentStep('witch')
   }
 
   const handleMasterPassContinue = () => {
@@ -1279,6 +1285,12 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
               )
             })()}
           </>
+        )}
+
+        {currentStep === 'master_pass_before_witch' && (
+          <MasterPassScreen
+            onContinue={handleMasterPassBeforeWitch}
+          />
         )}
 
         {currentStep === 'witch' && witch && (
