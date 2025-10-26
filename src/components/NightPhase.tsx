@@ -5,16 +5,64 @@ import { isWerewolf } from '../utils/gameUtils'
 import PassDeviceScreen from './PassDeviceScreen'
 import MasterPassScreen from './MasterPassScreen'
 
+interface FakeWitchScreenProps {
+  onComplete: () => void
+}
+
+function FakeWitchScreen({ onComplete }: FakeWitchScreenProps) {
+  return (
+    <div className="space-y-6">
+      <div className="text-center">
+        <h3 className="text-2xl font-bold mb-4 text-purple-400">
+          🎭 Instrução para o Mestre
+        </h3>
+      </div>
+      
+      <div className="bg-purple-900/30 border-2 border-purple-700 rounded-lg p-6 space-y-4">
+        <p className="text-purple-100 text-xl font-semibold text-center">
+          Não há bruxa viva no jogo
+        </p>
+        
+        <div className="bg-dark-800 rounded-lg p-4 space-y-3">
+          <p className="text-dark-200">
+            <strong>Importante:</strong> Para não revelar que a bruxa morreu ou não está no jogo, 
+            você deve fazer as perguntas normalmente:
+          </p>
+          
+          <ol className="list-decimal list-inside space-y-2 text-dark-300">
+            <li>Pergunte: "Bruxa, deseja usar a poção de cura?"</li>
+            <li>Aguarde alguns segundos</li>
+            <li>Pergunte: "Bruxa, deseja usar a poção de veneno?"</li>
+            <li>Aguarde alguns segundos</li>
+          </ol>
+          
+          <p className="text-yellow-300 text-sm mt-4">
+            💡 Dica: Mantenha o mesmo tempo que levaria se a bruxa estivesse realmente jogando.
+          </p>
+        </div>
+      </div>
+      
+      <button
+        onClick={onComplete}
+        className="btn-primary w-full text-lg"
+      >
+        Perguntas Realizadas - Continuar
+      </button>
+    </div>
+  )
+}
+
 interface WitchInterfaceProps {
   witch: Player
   actions: GameAction[]
   players: Player[]
   witchPotions: { healingPotion: boolean; poisonPotion: boolean }
-  onWitchAction: (action: 'heal' | 'poison' | 'skip', targetId?: string) => void
+  onWitchAction: (action: 'heal' | 'poison', targetId?: string) => void
+  onWitchComplete: () => void
 }
 
-function WitchInterface({ witch, actions, players, witchPotions, onWitchAction }: WitchInterfaceProps) {
-  const [selectedAction, setSelectedAction] = useState<'heal' | 'poison' | null>(null)
+function WitchInterface({ witch, actions, players, witchPotions, onWitchAction, onWitchComplete }: WitchInterfaceProps) {
+  const [currentScreen, setCurrentScreen] = useState<'heal' | 'poison'>('heal')
   const [selectedTarget, setSelectedTarget] = useState<string>('')
 
   // Função para determinar quem realmente morrerá considerando proteções
@@ -64,142 +112,196 @@ function WitchInterface({ witch, actions, players, witchPotions, onWitchAction }
   // A bruxa só pode ver a opção de cura se alguém for morrer E ela tiver a poção
   const canShowHealOption = dyingPlayers.length > 0 && witchPotions.healingPotion
 
-  const handlePotionUse = () => {
-    if (selectedAction && selectedTarget) {
-      onWitchAction(selectedAction, selectedTarget)
-    } else if (selectedAction && !selectedTarget) {
-      alert('Selecione um alvo!')
+  // Auto-selecionar quando há apenas uma vítima na tela de cura
+  useEffect(() => {
+    if (currentScreen === 'heal' && dyingPlayers.length === 1) {
+      setSelectedTarget(dyingPlayers[0].id)
     }
-  }
+  }, [currentScreen, dyingPlayers])
 
-  return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <h3 className="text-xl font-semibold mb-2">
-          🧙‍♀️ {witch.name} - Bruxa
-        </h3>
-        <p className="text-dark-300 mb-4">
-          Você pode usar suas poções esta noite. Escolha sabiamente!
-        </p>
-      </div>
-
-      {/* Mostrar quem morrerá esta noite - apenas se a bruxa tiver poção de cura */}
-      {canSeeDeaths && dyingPlayers.length > 0 && (
-        <div className="bg-red-900/30 border border-red-700 rounded-lg p-6">
-          <h4 className="font-semibold mb-4 text-red-300 text-lg">💀 Pessoas que morrerão esta noite:</h4>
-          <div className="space-y-3">
-            {dyingPlayers.map(player => (
-              <div key={player.id} className="text-red-100 text-4xl font-bold text-center py-2">
-                {player.name}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {canSeeDeaths && dyingPlayers.length === 0 && (
-        <div className="bg-green-900/30 border border-green-700 rounded-lg p-4">
-          <p className="text-green-300">🌸 Ninguém morrerá esta noite (ainda).</p>
-        </div>
-      )}
-
-      {!canSeeDeaths && (
-        <div className="bg-yellow-900/30 border border-yellow-700 rounded-lg p-4">
-          <p className="text-yellow-300">🔮 Você não possui mais a poção de cura, então não pode ver quem morrerá esta noite.</p>
-        </div>
-      )}
-
-      {/* Seleção de poção */}
-      <div className="grid md:grid-cols-3 gap-4">
-        <button
-          onClick={() => onWitchAction('skip')}
-          className="btn-secondary"
-        >
-          ⏭️ Não Usar Poções
-        </button>
-        
-        {canShowHealOption && (
-          <button
-            onClick={() => {
-              if (dyingPlayers.length === 1) {
-                onWitchAction('heal', dyingPlayers[0].id)
-              } else {
-                setSelectedAction(selectedAction === 'heal' ? null : 'heal')
-              }
-            }}
-            className={`btn-primary transition-all ${
-              selectedAction === 'heal' 
-                ? 'bg-green-500 hover:bg-green-600' 
-                : 'bg-green-600 hover:bg-green-700'
-            }`}
-          >
-            💚 Poção de Cura
-          </button>
-        )}
-        
-        <button
-          onClick={() => setSelectedAction(selectedAction === 'poison' ? null : 'poison')}
-          disabled={!witchPotions.poisonPotion}
-          className={`btn-primary transition-all ${
-            selectedAction === 'poison' 
-              ? 'bg-red-500 hover:bg-red-600' 
-              : 'bg-red-600 hover:bg-red-700'
-          } disabled:opacity-50 disabled:cursor-not-allowed`}
-        >
-          💀 Poção Venenosa {!witchPotions.poisonPotion && '(Usada)'}
-        </button>
-      </div>
-
-      {/* Seleção de alvo */}
-      {selectedAction && (
-        <div className="space-y-4">
+  // Tela de Cura
+  if (currentScreen === 'heal') {
+    const canUseCure = witchPotions.healingPotion && dyingPlayers.length > 0
+    
+    if (!canUseCure) {
+      // Mostrar mensagem de poção indisponível ou sem vítimas
+      return (
+        <div className="space-y-6">
           <div className="text-center">
-            <h4 className="font-semibold text-lg">
-              {selectedAction === 'heal' ? '💚 Escolha quem curar:' : '💀 Escolha quem envenenar:'}
-            </h4>
-            <p className="text-sm text-dark-400 mt-1">
-              {selectedAction === 'heal' 
-                ? 'Selecione uma pessoa que morrerá esta noite para salvá-la'
-                : 'Selecione uma pessoa para envenenar'
-              }
+            <h3 className="text-2xl font-bold mb-4">Bruxa - 💚 Poção de Cura</h3>
+          </div>
+          
+          <div className="bg-yellow-900/30 border border-yellow-700 rounded-lg p-6">
+            <p className="text-yellow-100 text-4xl font-bold text-center py-2">
+              {!witchPotions.healingPotion 
+                ? "Você não possui a poção de cura."
+                : "Ninguém vai morrer esta noite."}
             </p>
           </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {(selectedAction === 'heal' ? dyingPlayers : players.filter(p => p.id !== witch.id))
-              .map(player => (
-                <button
-                  key={player.id}
-                  onClick={() => setSelectedTarget(player.id)}
-                  className={`p-4 rounded-lg border transition-all ${
-                    selectedTarget === player.id
-                      ? selectedAction === 'heal' 
-                        ? 'bg-green-600 border-green-500'
-                        : 'bg-red-600 border-red-500'
-                      : 'bg-dark-700 border-dark-600 hover:bg-dark-600'
-                  }`}
-                >
-                  <div className="font-medium">{player.name}</div>
-                  <div className="text-sm text-dark-300 mt-1">
-                    {selectedAction === 'heal' ? 'Curar' : 'Envenenar'}
-                  </div>
-                </button>
-              ))}
-          </div>
-
-          <div className="text-center">
-            <button
-              onClick={handlePotionUse}
-              disabled={!selectedTarget}
-              className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              ✅ Confirmar {selectedAction === 'heal' ? 'Cura' : 'Envenenamento'}
-            </button>
-          </div>
+          
+          <button
+            onClick={() => {
+              setSelectedTarget('')
+              setCurrentScreen('poison')
+            }}
+            className="btn-primary w-full"
+          >
+            Avançar
+          </button>
         </div>
-      )}
-    </div>
-  )
+      )
+    }
+    
+    // Tem poção e há vítimas
+    return (
+      <div className="space-y-6">
+        <div className="text-center">
+          <h3 className="text-2xl font-bold mb-4">Bruxa - 💚 Poção de Cura</h3>
+          <p className="text-dark-300">Selecione quem deseja curar:</p>
+        </div>
+
+        {/* Botões dos jogadores que vão morrer */}
+        <div className="space-y-3">
+          {dyingPlayers.map(player => (
+            <button
+              key={player.id}
+              onClick={() => setSelectedTarget(player.id)}
+              className={`w-full p-6 rounded-lg border-2 transition-all ${
+                selectedTarget === player.id
+                  ? 'bg-green-600 border-green-400'
+                  : 'bg-dark-700 border-dark-600 hover:bg-dark-600'
+              }`}
+            >
+              <div className="text-4xl font-bold text-center">
+                {player.name}
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* Botões de ação */}
+        <div className="flex gap-4">
+          <button
+            onClick={() => {
+              setSelectedTarget('')
+              setCurrentScreen('poison')
+            }}
+            className="btn-secondary flex-1"
+          >
+            Não Usar Poção de Cura
+          </button>
+          <button
+            onClick={() => {
+              onWitchAction('heal', selectedTarget)
+              setSelectedTarget('')
+              setCurrentScreen('poison')
+            }}
+            disabled={!selectedTarget}
+            className="btn-primary bg-green-600 hover:bg-green-700 flex-1 disabled:opacity-50"
+          >
+            Curar
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Tela de Envenenamento
+  if (currentScreen === 'poison') {
+    const canUsePoison = witchPotions.poisonPotion
+    
+    if (!canUsePoison) {
+      // Mostrar mensagem de poção indisponível
+      return (
+        <div className="space-y-6">
+          <div className="text-center">
+            <h3 className="text-2xl font-bold mb-4">Bruxa - 💀 Poção Venenosa</h3>
+          </div>
+          
+          <div className="bg-yellow-900/30 border border-yellow-700 rounded-lg p-6">
+            <p className="text-yellow-100 text-4xl font-bold text-center py-2">
+              Você não possui a poção de veneno.
+            </p>
+          </div>
+          
+          <button
+            onClick={() => onWitchComplete()}
+            className="btn-primary w-full"
+          >
+            Finalizar
+          </button>
+        </div>
+      )
+    }
+    
+    // Tem poção de veneno
+    const availablePlayers = players.filter(p => p.id !== witch.id && p.isAlive)
+    const selectedPlayer = availablePlayers.find(p => p.id === selectedTarget)
+    
+    return (
+      <div className="space-y-6">
+        <div className="text-center">
+          <h3 className="text-2xl font-bold mb-4">Bruxa - 💀 Poção Venenosa</h3>
+          <p className="text-dark-300">Selecione quem deseja envenenar:</p>
+        </div>
+
+        {/* Dropdown de seleção */}
+        <div>
+          <select
+            value={selectedTarget}
+            onChange={(e) => setSelectedTarget(e.target.value)}
+            className="w-full p-4 rounded-lg bg-dark-700 border border-dark-600 text-white text-lg"
+          >
+            <option value="">-- Selecione uma vítima --</option>
+            {availablePlayers.map(player => (
+              <option key={player.id} value={player.id}>
+                {player.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Nome selecionado em destaque */}
+        {selectedPlayer && (
+          <div className="bg-red-900/30 border-2 border-red-700 rounded-lg p-8">
+            <div className="text-center">
+              <p className="text-red-300 text-lg mb-4">Vítima Selecionada:</p>
+              <p className="text-red-100 text-5xl font-bold">
+                {selectedPlayer.name}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Botões de ação */}
+        <div className="flex gap-4">
+          <button
+            onClick={() => {
+              setSelectedTarget('')
+              onWitchComplete()
+            }}
+            className="btn-secondary flex-1"
+          >
+            Não Usar Poção de Veneno
+          </button>
+          <button
+            onClick={() => {
+              onWitchAction('poison', selectedTarget)
+              setSelectedTarget('')
+              onWitchComplete()
+            }}
+            disabled={!selectedTarget}
+            className="btn-primary bg-red-600 hover:bg-red-700 flex-1 disabled:opacity-50"
+          >
+            Confirmar Envenenamento
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Nunca deve chegar aqui pois sempre começa com 'heal'
+  return null
 }
 
 interface MediumInterfaceProps {
@@ -730,6 +832,7 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
   const gagWerewolf = alivePlayers.find(p => p.character === CharacterClass.LOBISOMEM_MORDACA)
   const occult = alivePlayers.find(p => p.character === CharacterClass.OCCULT)
   const witch = alivePlayers.find(p => p.character === CharacterClass.BRUXA)
+  const witchWasEnabled = gameState?.config.allowedClasses.includes(CharacterClass.BRUXA)
 
   // Jogadores que fazem ações durante a fase de ações individuais
   const actionPlayers = alivePlayers.filter(player => {
@@ -784,15 +887,15 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
       } else {
         setCurrentStep('pass_device')
       }
-    } else if (witch) {
-      // Novo comportamento: ir para master_pass_before_witch
+    } else if (witchWasEnabled) {
+      // Ir para fase da bruxa (real ou falsa) se a bruxa estava habilitada
       if (gameState?.config.debugMode) {
         setCurrentStep('witch')
       } else {
         setCurrentStep('master_pass_before_witch')
       }
     } else {
-      // Skip MasterPassScreen in debug mode when no witch
+      // Bruxa não habilitada - pular para complete
       if (gameState?.config.debugMode) {
         setCurrentStep('complete')
       } else {
@@ -976,21 +1079,22 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
     setCurrentStep('player_actions')
   }
 
-  const handleWitchAction = (action: 'heal' | 'poison' | 'skip', targetId?: string) => {
-    if (action === 'heal' || action === 'poison') {
-      const actionType = action === 'heal' ? ActionType.HEAL : ActionType.POISON
-      addAction(witch!.id, actionType, targetId)
-      
-      // Consumir a poção usada
-      if (action === 'heal') {
-        setUpdatedWitchPotions((prev: WitchPotions) => ({ ...prev, healingPotion: false }))
-      } else if (action === 'poison') {
-        setUpdatedWitchPotions((prev: WitchPotions) => ({ ...prev, poisonPotion: false }))
-      }
+  const handleWitchAction = (action: 'heal' | 'poison', targetId?: string) => {
+    const actionType = action === 'heal' ? ActionType.HEAL : ActionType.POISON
+    addAction(witch!.id, actionType, targetId)
+    
+    // Consumir a poção usada
+    if (action === 'heal') {
+      setUpdatedWitchPotions((prev: WitchPotions) => ({ ...prev, healingPotion: false }))
+    } else if (action === 'poison') {
+      setUpdatedWitchPotions((prev: WitchPotions) => ({ ...prev, poisonPotion: false }))
     }
-
+    
     setSelectedTarget('')
-    // Ir direto para complete (remover master_pass)
+    // NÃO finalizar aqui - a interface da bruxa controla o fluxo
+  }
+
+  const handleWitchComplete = () => {
     setCurrentStep('complete')
   }
 
@@ -1293,14 +1397,21 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
           />
         )}
 
-        {currentStep === 'witch' && witch && (
-          <WitchInterface
-            witch={witch}
-            actions={actions}
-            players={alivePlayers}
-            witchPotions={updatedWitchPotions}
-            onWitchAction={handleWitchAction}
-          />
+        {currentStep === 'witch' && (
+          witch ? (
+            <WitchInterface
+              witch={witch}
+              actions={actions}
+              players={alivePlayers}
+              witchPotions={updatedWitchPotions}
+              onWitchAction={handleWitchAction}
+              onWitchComplete={handleWitchComplete}
+            />
+          ) : (
+            <FakeWitchScreen
+              onComplete={handleWitchComplete}
+            />
+          )
         )}
 
         {currentStep === 'master_pass' && (
