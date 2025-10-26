@@ -63,11 +63,13 @@ export function distributeCharacters(
           const randomIndex = Math.floor(Math.random() * availableWerewolves.length);
           selectedClasses.push(availableWerewolves[randomIndex]);
         } else {
+          // Se não há mais classes de lobisomem disponíveis, usar lobisomem comum como fallback
           selectedClasses.push(CharacterClass.LOBISOMEM);
         }
       }
     } else {
-      selectedClasses.push(CharacterClass.LOBISOMEM); // Fallback
+      // Se não há classes de lobisomem selecionadas, sempre usar lobisomem comum
+      selectedClasses.push(CharacterClass.LOBISOMEM);
     }
   }
 
@@ -81,24 +83,28 @@ export function distributeCharacters(
     if (availableAlternatives.length > 0) {
       const randomIndex = Math.floor(Math.random() * availableAlternatives.length);
       selectedClasses.push(availableAlternatives[randomIndex]);
+    } else {
+      // Se não há mais classes más alternativas disponíveis, usar traidor como fallback
+      selectedClasses.push(CharacterClass.TRAIDOR);
     }
   }
 
-  // Preencher o restante com classes disponíveis
+  // Preencher o restante com classes do bem disponíveis
   const remainingSlots = config.numberOfPlayers - selectedClasses.length;
   
-  // Primeiro, adicionar todas as classes únicas disponíveis (exceto aldeão)
-  const uniqueClassesNotUsed = nonWerewolfClasses.filter(cls => 
-    cls !== CharacterClass.ALDEAO && !selectedClasses.includes(cls)
+  // Obter classes do bem disponíveis (exceto aldeão)
+  const goodClassesAvailable = nonWerewolfClasses.filter(cls => 
+    cls !== CharacterClass.ALDEAO && !selectedClasses.includes(cls) && getCharacterTeam(cls) === Team.GOOD
   );
   
-  for (let i = 0; i < remainingSlots && uniqueClassesNotUsed.length > 0; i++) {
-    const randomIndex = Math.floor(Math.random() * uniqueClassesNotUsed.length);
-    const selectedClass = uniqueClassesNotUsed.splice(randomIndex, 1)[0];
+  // Adicionar classes do bem únicas primeiro
+  for (let i = 0; i < remainingSlots && goodClassesAvailable.length > 0; i++) {
+    const randomIndex = Math.floor(Math.random() * goodClassesAvailable.length);
+    const selectedClass = goodClassesAvailable.splice(randomIndex, 1)[0];
     selectedClasses.push(selectedClass);
   }
   
-  // Se ainda há slots restantes, preencher com aldeões
+  // Se ainda há slots restantes, preencher com aldeões (sempre disponível como fallback)
   const stillRemainingSlots = config.numberOfPlayers - selectedClasses.length;
   for (let i = 0; i < stillRemainingSlots; i++) {
     selectedClasses.push(CharacterClass.ALDEAO);

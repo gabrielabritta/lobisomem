@@ -104,9 +104,17 @@ export default function GameSetup({ onGameStart }: GameSetupProps) {
       if (prev.allowedClasses.includes(characterClass)) {
         // Tentando remover uma classe
         if (isWerewolfClass && currentWerewolfClasses.length === 1) {
-          // Não permitir remover a última classe de lobisomem
-          alert('Pelo menos uma classe de lobisomem deve estar habilitada!')
-          return prev
+          // Se tentar remover a última classe de lobisomem, adicionar automaticamente o lobisomem comum
+          // Primeiro remover a classe que foi desselecionada
+          const newAllowedClasses = prev.allowedClasses.filter(c => c !== characterClass)
+          // Verificar se o lobisomem comum já está na lista, se não, adicionar
+          if (!newAllowedClasses.includes(CharacterClass.LOBISOMEM)) {
+            newAllowedClasses.push(CharacterClass.LOBISOMEM)
+          }
+          return {
+            ...prev,
+            allowedClasses: newAllowedClasses
+          }
         }
         return {
           ...prev,
@@ -134,12 +142,6 @@ export default function GameSetup({ onGameStart }: GameSetupProps) {
   const handleStartGame = () => {
     if (playerNames.some(name => !name.trim())) {
       alert('Todos os jogadores devem ter nomes válidos!')
-      return
-    }
-
-    // Verificar se há classes suficientes
-    if (config.allowedClasses.length < config.numberOfPlayers) {
-      alert('Não há classes suficientes para todos os jogadores!')
       return
     }
 
@@ -172,6 +174,60 @@ export default function GameSetup({ onGameStart }: GameSetupProps) {
 
     onGameStart(gameState)
   }
+
+  // Verificar se será necessário usar classes fallback
+  const checkFallbackNeeded = () => {
+    const werewolfClasses = config.allowedClasses.filter(cls => 
+      [CharacterClass.LOBISOMEM, CharacterClass.LOBISOMEM_VOODOO, CharacterClass.LOBISOMEM_MORDACA].includes(cls)
+    );
+    const alternativeEvilClasses = config.allowedClasses.filter(cls =>
+      [CharacterClass.VAMPIRO, CharacterClass.TRAIDOR, CharacterClass.ZUMBI, CharacterClass.BOBO].includes(cls)
+    );
+    const goodClasses = config.allowedClasses.filter(cls =>
+      cls !== CharacterClass.ALDEAO && 
+      [CharacterClass.MEDIUM, CharacterClass.VIDENTE, CharacterClass.CUPIDO, CharacterClass.TALISMA, 
+       CharacterClass.BRUXA, CharacterClass.BALA_DE_PRATA, CharacterClass.GUARDIAO, CharacterClass.HEMOMANTE, 
+       CharacterClass.HEROI, CharacterClass.OCCULT].includes(cls)
+    );
+
+    const warnings: string[] = [];
+
+    // Verificar se lobisomem comum está habilitado
+    const isCommonWerewolfEnabled = config.allowedClasses.includes(CharacterClass.LOBISOMEM);
+    
+    // Verificar lobisomens - não mostrar aviso se lobisomem comum estiver habilitado
+    if (!isCommonWerewolfEnabled) {
+      if (werewolfClasses.length > 0 && config.numberOfWerewolves > werewolfClasses.length) {
+        warnings.push(`Lobisomens: ${config.numberOfWerewolves - werewolfClasses.length} ser${config.numberOfWerewolves - werewolfClasses.length === 1 ? 'á' : 'ão'} Lobisomem comum`);
+      } else if (werewolfClasses.length === 0 && config.numberOfWerewolves > 0) {
+        warnings.push(`Todos os ${config.numberOfWerewolves} lobisomens serão Lobisomens comuns`);
+      }
+    }
+
+    // Verificar classes más alternativas - sempre mostrar aviso
+    if (alternativeEvilClasses.length > 0 && config.numberOfAlternativeEvil > alternativeEvilClasses.length) {
+      warnings.push(`Classes más: ${config.numberOfAlternativeEvil - alternativeEvilClasses.length} ser${config.numberOfAlternativeEvil - alternativeEvilClasses.length === 1 ? 'á' : 'ão'} Traidor(es)`);
+    } else if (alternativeEvilClasses.length === 0 && config.numberOfAlternativeEvil > 0) {
+      warnings.push(`Todos os ${config.numberOfAlternativeEvil} jogadores maus alternativos serão Traidores`);
+    }
+
+    // Verificar se aldeão está habilitado
+    const isVillagerEnabled = config.allowedClasses.includes(CharacterClass.ALDEAO);
+    
+    // Verificar classes do bem - não mostrar aviso se aldeão estiver habilitado
+    if (!isVillagerEnabled) {
+      const totalGoodSlots = config.numberOfPlayers - config.numberOfWerewolves - config.numberOfAlternativeEvil;
+      if (goodClasses.length > 0 && totalGoodSlots > goodClasses.length) {
+        warnings.push(`Classes do bem: ${totalGoodSlots - goodClasses.length} ser${totalGoodSlots - goodClasses.length === 1 ? 'á' : 'ão'} Alde${totalGoodSlots - goodClasses.length === 1 ? 'ão' : 'ões'}`);
+      } else if (goodClasses.length === 0 && totalGoodSlots > 0) {
+        warnings.push(`Todos os ${totalGoodSlots} jogadores do bem serão Aldeões`);
+      }
+    }
+
+    return warnings;
+  }
+
+  const fallbackWarnings = checkFallbackNeeded()
 
   const allCharacterClasses = Object.values(CharacterClass)
 
@@ -390,6 +446,28 @@ export default function GameSetup({ onGameStart }: GameSetupProps) {
             </div>
           )}
         </div>
+
+        {/* Aviso de preenchimento automático */}
+        {fallbackWarnings.length > 0 && (
+          <div className="mb-6 p-4 bg-yellow-900/30 border border-yellow-700 rounded-lg">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">⚠️</span>
+              <div className="flex-1">
+                <h3 className="font-semibold text-yellow-400 mb-2">
+                  Preenchimento Automático de Classes
+                </h3>
+                <p className="text-sm text-dark-300 mb-2">
+                  Não há classes selecionadas suficientes para todos os jogadores. As seguintes classes serão usadas automaticamente:
+                </p>
+                <ul className="list-disc list-inside text-sm text-dark-300 space-y-1">
+                  {fallbackWarnings.map((warning, index) => (
+                    <li key={index}>{warning}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="text-center">
           <button
