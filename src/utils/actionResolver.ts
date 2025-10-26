@@ -205,7 +205,44 @@ export function resolveNightActions(players: Player[], actions: GameAction[]): A
     }
   })
 
-  // 4. Processar tiros do Bala de Prata
+  // 4. Processar morte do Herói se matou alguém bom
+  kills.forEach(action => {
+    if (action.targetId) {
+      const killer = updatedPlayers.find(p => p.id === action.playerId)
+      const target = updatedPlayers.find(p => p.id === action.targetId)
+      
+      // Verificar se o assassino é o Herói e se o alvo morreu
+      if (killer && target && killer.character === CharacterClass.HEROI && !target.isAlive && killer.isAlive) {
+        // Verificar se o alvo era bom
+        const isTargetGood = [
+          CharacterClass.ALDEAO, CharacterClass.MEDIUM, CharacterClass.VIDENTE,
+          CharacterClass.CUPIDO, CharacterClass.TALISMA, CharacterClass.BRUXA,
+          CharacterClass.BALA_DE_PRATA, CharacterClass.GUARDIAO, CharacterClass.HEMOMANTE,
+          CharacterClass.HEROI
+        ].includes(target.character)
+        
+        if (isTargetGood) {
+          // Matar o Herói
+          updatedPlayers = updatedPlayers.map(p =>
+            p.id === killer.id ? { ...p, isAlive: false } : p
+          )
+          deadPlayers.push(killer.id)
+          deathReasons[killer.id] = 'morreu por matar um inocente'
+          messages.push(`${killer.name} matou ${target.name}, que era inocente, e morreu!`)
+          
+          // Aplicar mortes secundárias do Herói
+          const loveDeath = applyLoveDeath(updatedPlayers, killer.id)
+          const bloodDeath = applyBloodBondDeath(updatedPlayers, killer.id)
+          deadPlayers.push(...loveDeath, ...bloodDeath)
+          
+          // Register all secondary death reasons recursively
+          registerAllSecondaryDeaths(deathReasons, updatedPlayers, killer.id, killer.name)
+        }
+      }
+    }
+  })
+
+  // 5. Processar tiros do Bala de Prata
   shoots.forEach(action => {
     if (action.targetId) {
       const shooter = updatedPlayers.find(p => p.id === action.playerId)
@@ -245,7 +282,7 @@ export function resolveNightActions(players: Player[], actions: GameAction[]): A
     }
   })
 
-  // 5. Aplicar infecções
+  // 6. Aplicar infecções
   infections.forEach(action => {
     if (action.targetId) {
       const target = updatedPlayers.find(p => p.id === action.targetId)
@@ -257,7 +294,7 @@ export function resolveNightActions(players: Player[], actions: GameAction[]): A
     }
   })
 
-  // 6. Aplicar silenciamentos
+  // 7. Aplicar silenciamentos
   silences.forEach(action => {
     if (action.targetId) {
       const target = updatedPlayers.find(p => p.id === action.targetId)
@@ -270,7 +307,7 @@ export function resolveNightActions(players: Player[], actions: GameAction[]): A
     }
   })
 
-  // 7. Processar investigações
+  // 8. Processar investigações
   investigations_actions.forEach(action => {
     if (action.targetId) {
       const investigator = updatedPlayers.find(p => p.id === action.playerId)
