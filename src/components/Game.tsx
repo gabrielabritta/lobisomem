@@ -22,7 +22,8 @@ export default function Game({ gameState, onGameReset }: GameProps) {
     deadPlayers: string[]
     messages: string[]
     investigations: { [playerId: string]: any }
-  }>({ deadPlayers: [], messages: [], investigations: {} })
+    deathReasons: { [playerId: string]: string }
+  }>({ deadPlayers: [], messages: [], investigations: {}, deathReasons: {} })
   const [showGameStatus, setShowGameStatus] = useState(false)
 
   const handleDistributionComplete = () => {
@@ -94,7 +95,8 @@ export default function Game({ gameState, onGameReset }: GameProps) {
     setNightResults({
       deadPlayers: results.deadPlayers,
       messages: results.messages,
-      investigations: results.investigations
+      investigations: results.investigations,
+      deathReasons: results.deathReasons
     })
 
     // Verificar se algum Bala de Prata morreu durante a noite
@@ -190,7 +192,7 @@ export default function Game({ gameState, onGameReset }: GameProps) {
     }))
 
     // Limpar resultados da noite anterior
-    setNightResults({ deadPlayers: [], messages: [], investigations: {} })
+    setNightResults({ deadPlayers: [], messages: [], investigations: {}, deathReasons: {} })
   }
 
   const handleSilverBulletShot = (silverBulletPlayerId: string, targetId: string, trigger: 'night_death' | 'day_expulsion') => {
@@ -230,7 +232,8 @@ export default function Game({ gameState, onGameReset }: GameProps) {
     setNightResults(prev => ({
       ...prev,
       messages: [...prev.messages, ...results.messages],
-      deadPlayers: [...prev.deadPlayers, ...results.deadPlayers]
+      deadPlayers: [...prev.deadPlayers, ...results.deadPlayers],
+      deathReasons: { ...prev.deathReasons, ...results.deathReasons }
     }))
 
     // Se trigger for 'night_death', não mudamos a fase (já estamos em DAY dentro da DayPhase)
@@ -342,6 +345,7 @@ export default function Game({ gameState, onGameReset }: GameProps) {
           deadToday={nightResults.deadPlayers}
           nightMessages={nightResults.messages}
           investigations={nightResults.investigations}
+          deathReasons={nightResults.deathReasons}
           needsMayorReelection={checkMayorStatus(currentGameState.players, currentGameState.mayorId).needsReelection}
           previousMayorName={checkMayorStatus(currentGameState.players, currentGameState.mayorId).previousMayorName}
           pendingSilverBulletPlayer={currentGameState.pendingSilverBulletPlayer}
