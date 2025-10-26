@@ -232,7 +232,11 @@ export function checkVictoryConditions(gameState: GameState): {
   }
 
   // 3. Verificar vitória dos Lobisomens (número >= não-lobisomens)
-  if (aliveWerewolves.length >= (alivePlayers.length - aliveWerewolves.length)) {
+  // Excluir o Traidor da contagem de não-lobisomens
+  const aliveTraitors = alivePlayers.filter(p => p.character === CharacterClass.TRAIDOR);
+  const nonWerewolvesCount = alivePlayers.length - aliveWerewolves.length - aliveTraitors.length;
+  
+  if (aliveWerewolves.length >= nonWerewolvesCount) {
     const werewolfIds = aliveWerewolves.map(p => p.id);
     const traitorIds = alivePlayers
       .filter(p => p.character === CharacterClass.TRAIDOR)
