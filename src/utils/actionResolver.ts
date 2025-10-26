@@ -177,6 +177,8 @@ export function resolveNightActions(players: Player[], actions: GameAction[]): A
             deathReasons[targetId] = 'envenenado pela bruxa'
           } else if (killer.character === CharacterClass.VAMPIRO) {
             deathReasons[targetId] = 'morto pelo vampiro'
+          } else if (killer.character === CharacterClass.HEROI) {
+            deathReasons[targetId] = 'morto pelo herói'
           } else {
             deathReasons[targetId] = 'morto pelos lobisomens'
           }
