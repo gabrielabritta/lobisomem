@@ -291,36 +291,57 @@ export function checkVictoryConditions(gameState: GameState): {
   };
 }
 
-// Função para aplicar morte por amor
-export function applyLoveDeath(players: Player[], deadPlayerId: string): string[] {
+// Função auxiliar para aplicar todas as mortes secundárias (amor e ligação de sangue) recursivamente
+function applyAllSecondaryDeaths(players: Player[], deadPlayerId: string, processedIds: Set<string>): string[] {
+  // Prevenir processamento duplicado e loops infinitos
+  if (processedIds.has(deadPlayerId)) {
+    return [];
+  }
+  
+  processedIds.add(deadPlayerId);
+  const allNewDeaths: string[] = [];
+  
   const deadPlayer = players.find(p => p.id === deadPlayerId);
-  const newDeaths: string[] = [];
-
+  
+  // Aplicar morte por amor
   if (deadPlayer?.isInLove && deadPlayer.lovePartnerId) {
     const lover = players.find(p => p.id === deadPlayer.lovePartnerId);
-    if (lover?.isAlive) {
+    if (lover?.isAlive && !processedIds.has(lover.id)) {
       lover.isAlive = false;
-      newDeaths.push(lover.id);
+      allNewDeaths.push(lover.id);
+      
+      // Aplicar recursivamente mortes secundárias do amante que morreu
+      const loverSecondaryDeaths = applyAllSecondaryDeaths(players, lover.id, processedIds);
+      allNewDeaths.push(...loverSecondaryDeaths);
     }
   }
-
-  return newDeaths;
-}
-
-// Função para aplicar morte por ligação de sangue
-export function applyBloodBondDeath(players: Player[], deadPlayerId: string): string[] {
-  const deadPlayer = players.find(p => p.id === deadPlayerId);
-  const newDeaths: string[] = [];
-
+  
+  // Aplicar morte por ligação de sangue
   if (deadPlayer?.bloodBondPartnerId) {
     const bondedPlayer = players.find(p => p.id === deadPlayer.bloodBondPartnerId);
-    if (bondedPlayer?.isAlive) {
+    if (bondedPlayer?.isAlive && !processedIds.has(bondedPlayer.id)) {
       bondedPlayer.isAlive = false;
-      newDeaths.push(bondedPlayer.id);
+      allNewDeaths.push(bondedPlayer.id);
+      
+      // Aplicar recursivamente mortes secundárias do jogador com ligação de sangue que morreu
+      const bondSecondaryDeaths = applyAllSecondaryDeaths(players, bondedPlayer.id, processedIds);
+      allNewDeaths.push(...bondSecondaryDeaths);
     }
   }
+  
+  return allNewDeaths;
+}
 
-  return newDeaths;
+// Função para aplicar morte por amor (mantida para compatibilidade)
+export function applyLoveDeath(players: Player[], deadPlayerId: string): string[] {
+  const processedIds = new Set<string>();
+  return applyAllSecondaryDeaths(players, deadPlayerId, processedIds);
+}
+
+// Função para aplicar morte por ligação de sangue (mantida para compatibilidade)
+export function applyBloodBondDeath(players: Player[], deadPlayerId: string): string[] {
+  const processedIds = new Set<string>();
+  return applyAllSecondaryDeaths(players, deadPlayerId, processedIds);
 }
 
 // Função para processar votos
