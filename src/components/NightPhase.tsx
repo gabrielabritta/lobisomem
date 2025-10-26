@@ -13,40 +13,24 @@ function FakeWitchScreen({ onComplete }: FakeWitchScreenProps) {
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h3 className="text-2xl font-bold mb-4 text-purple-400">
-          🎭 Instrução para o Mestre
-        </h3>
+        <h3 className="text-2xl font-bold mb-4">Bruxa</h3>
       </div>
       
-      <div className="bg-purple-900/30 border-2 border-purple-700 rounded-lg p-6 space-y-4">
-        <p className="text-purple-100 text-xl font-semibold text-center">
-          Não há bruxa viva no jogo
+      <div className="bg-purple-900/30 border-2 border-purple-700 rounded-lg p-6">
+        <p className="text-purple-100 text-xl font-semibold text-center mb-4">
+          ⚠️ Não há bruxa viva
         </p>
         
-        <div className="bg-dark-800 rounded-lg p-4 space-y-3">
-          <p className="text-dark-200">
-            <strong>Importante:</strong> Para não revelar que a bruxa morreu ou não está no jogo, 
-            você deve fazer as perguntas normalmente:
-          </p>
-          
-          <ol className="list-decimal list-inside space-y-2 text-dark-300">
-            <li>Pergunte: "Bruxa, deseja usar a poção de cura?"</li>
-            <li>Aguarde alguns segundos</li>
-            <li>Pergunte: "Bruxa, deseja usar a poção de veneno?"</li>
-            <li>Aguarde alguns segundos</li>
-          </ol>
-          
-          <p className="text-yellow-300 text-sm mt-4">
-            💡 Dica: Mantenha o mesmo tempo que levaria se a bruxa estivesse realmente jogando.
-          </p>
-        </div>
+        <p className="text-dark-200 text-center text-lg">
+          Faça as perguntas normalmente para não revelar esta informação.
+        </p>
       </div>
       
       <button
         onClick={onComplete}
         className="btn-primary w-full text-lg"
       >
-        Perguntas Realizadas - Continuar
+        Continuar
       </button>
     </div>
   )
