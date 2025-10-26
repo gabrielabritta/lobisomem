@@ -63,11 +63,13 @@ export function distributeCharacters(
           const randomIndex = Math.floor(Math.random() * availableWerewolves.length);
           selectedClasses.push(availableWerewolves[randomIndex]);
         } else {
+          // Se não há mais classes de lobisomem disponíveis, usar lobisomem comum como fallback
           selectedClasses.push(CharacterClass.LOBISOMEM);
         }
       }
     } else {
-      selectedClasses.push(CharacterClass.LOBISOMEM); // Fallback
+      // Se não há classes de lobisomem selecionadas, sempre usar lobisomem comum
+      selectedClasses.push(CharacterClass.LOBISOMEM);
     }
   }
 
@@ -81,24 +83,28 @@ export function distributeCharacters(
     if (availableAlternatives.length > 0) {
       const randomIndex = Math.floor(Math.random() * availableAlternatives.length);
       selectedClasses.push(availableAlternatives[randomIndex]);
+    } else {
+      // Se não há mais classes más alternativas disponíveis, usar traidor como fallback
+      selectedClasses.push(CharacterClass.TRAIDOR);
     }
   }
 
-  // Preencher o restante com classes disponíveis
+  // Preencher o restante com classes do bem disponíveis
   const remainingSlots = config.numberOfPlayers - selectedClasses.length;
   
-  // Primeiro, adicionar todas as classes únicas disponíveis (exceto aldeão)
-  const uniqueClassesNotUsed = nonWerewolfClasses.filter(cls => 
-    cls !== CharacterClass.ALDEAO && !selectedClasses.includes(cls)
+  // Obter classes do bem disponíveis (exceto aldeão)
+  const goodClassesAvailable = nonWerewolfClasses.filter(cls => 
+    cls !== CharacterClass.ALDEAO && !selectedClasses.includes(cls) && getCharacterTeam(cls) === Team.GOOD
   );
   
-  for (let i = 0; i < remainingSlots && uniqueClassesNotUsed.length > 0; i++) {
-    const randomIndex = Math.floor(Math.random() * uniqueClassesNotUsed.length);
-    const selectedClass = uniqueClassesNotUsed.splice(randomIndex, 1)[0];
+  // Adicionar classes do bem únicas primeiro
+  for (let i = 0; i < remainingSlots && goodClassesAvailable.length > 0; i++) {
+    const randomIndex = Math.floor(Math.random() * goodClassesAvailable.length);
+    const selectedClass = goodClassesAvailable.splice(randomIndex, 1)[0];
     selectedClasses.push(selectedClass);
   }
   
-  // Se ainda há slots restantes, preencher com aldeões
+  // Se ainda há slots restantes, preencher com aldeões (sempre disponível como fallback)
   const stillRemainingSlots = config.numberOfPlayers - selectedClasses.length;
   for (let i = 0; i < stillRemainingSlots; i++) {
     selectedClasses.push(CharacterClass.ALDEAO);
@@ -232,7 +238,11 @@ export function checkVictoryConditions(gameState: GameState): {
   }
 
   // 3. Verificar vitória dos Lobisomens (número >= não-lobisomens)
-  if (aliveWerewolves.length >= (alivePlayers.length - aliveWerewolves.length)) {
+  // Excluir o Traidor da contagem de não-lobisomens
+  const aliveTraitors = alivePlayers.filter(p => p.character === CharacterClass.TRAIDOR);
+  const nonWerewolvesCount = alivePlayers.length - aliveWerewolves.length - aliveTraitors.length;
+  
+  if (aliveWerewolves.length >= nonWerewolvesCount) {
     const werewolfIds = aliveWerewolves.map(p => p.id);
     const traitorIds = alivePlayers
       .filter(p => p.character === CharacterClass.TRAIDOR)
@@ -291,36 +301,57 @@ export function checkVictoryConditions(gameState: GameState): {
   };
 }
 
-// Função para aplicar morte por amor
-export function applyLoveDeath(players: Player[], deadPlayerId: string): string[] {
+// Função auxiliar para aplicar todas as mortes secundárias (amor e ligação de sangue) recursivamente
+function applyAllSecondaryDeaths(players: Player[], deadPlayerId: string, processedIds: Set<string>): string[] {
+  // Prevenir processamento duplicado e loops infinitos
+  if (processedIds.has(deadPlayerId)) {
+    return [];
+  }
+  
+  processedIds.add(deadPlayerId);
+  const allNewDeaths: string[] = [];
+  
   const deadPlayer = players.find(p => p.id === deadPlayerId);
-  const newDeaths: string[] = [];
-
+  
+  // Aplicar morte por amor
   if (deadPlayer?.isInLove && deadPlayer.lovePartnerId) {
     const lover = players.find(p => p.id === deadPlayer.lovePartnerId);
-    if (lover?.isAlive) {
+    if (lover?.isAlive && !processedIds.has(lover.id)) {
       lover.isAlive = false;
-      newDeaths.push(lover.id);
+      allNewDeaths.push(lover.id);
+      
+      // Aplicar recursivamente mortes secundárias do amante que morreu
+      const loverSecondaryDeaths = applyAllSecondaryDeaths(players, lover.id, processedIds);
+      allNewDeaths.push(...loverSecondaryDeaths);
     }
   }
-
-  return newDeaths;
-}
-
-// Função para aplicar morte por ligação de sangue
-export function applyBloodBondDeath(players: Player[], deadPlayerId: string): string[] {
-  const deadPlayer = players.find(p => p.id === deadPlayerId);
-  const newDeaths: string[] = [];
-
+  
+  // Aplicar morte por ligação de sangue
   if (deadPlayer?.bloodBondPartnerId) {
     const bondedPlayer = players.find(p => p.id === deadPlayer.bloodBondPartnerId);
-    if (bondedPlayer?.isAlive) {
+    if (bondedPlayer?.isAlive && !processedIds.has(bondedPlayer.id)) {
       bondedPlayer.isAlive = false;
-      newDeaths.push(bondedPlayer.id);
+      allNewDeaths.push(bondedPlayer.id);
+      
+      // Aplicar recursivamente mortes secundárias do jogador com ligação de sangue que morreu
+      const bondSecondaryDeaths = applyAllSecondaryDeaths(players, bondedPlayer.id, processedIds);
+      allNewDeaths.push(...bondSecondaryDeaths);
     }
   }
+  
+  return allNewDeaths;
+}
 
-  return newDeaths;
+// Função para aplicar morte por amor (mantida para compatibilidade)
+export function applyLoveDeath(players: Player[], deadPlayerId: string): string[] {
+  const processedIds = new Set<string>();
+  return applyAllSecondaryDeaths(players, deadPlayerId, processedIds);
+}
+
+// Função para aplicar morte por ligação de sangue (mantida para compatibilidade)
+export function applyBloodBondDeath(players: Player[], deadPlayerId: string): string[] {
+  const processedIds = new Set<string>();
+  return applyAllSecondaryDeaths(players, deadPlayerId, processedIds);
 }
 
 // Função para processar votos

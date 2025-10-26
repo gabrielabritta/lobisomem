@@ -9,11 +9,45 @@ import {
 } from '../types/game'
 import { applyLoveDeath, applyBloodBondDeath } from './gameUtils'
 
+// Helper function to recursively register death reasons for all secondary deaths
+function registerAllSecondaryDeaths(
+  deathReasons: { [playerId: string]: string },
+  updatedPlayers: Player[],
+  deadId: string,
+  originalDeadName: string,
+  processed: Set<string> = new Set()
+) {
+  if (processed.has(deadId)) return
+  processed.add(deadId)
+
+  const deadPlayer = updatedPlayers.find(p => p.id === deadId)
+  if (!deadPlayer) return
+
+  // Check for lover
+  if (deadPlayer.isInLove && deadPlayer.lovePartnerId) {
+    const lover = updatedPlayers.find(p => p.id === deadPlayer.lovePartnerId)
+    if (lover && !lover.isAlive && !deathReasons[lover.id]) {
+      deathReasons[lover.id] = `morreu de amor por ${deadPlayer.name}`
+      registerAllSecondaryDeaths(deathReasons, updatedPlayers, lover.id, deadPlayer.name, processed)
+    }
+  }
+
+  // Check for blood bond partner
+  if (deadPlayer.bloodBondPartnerId) {
+    const bonded = updatedPlayers.find(p => p.id === deadPlayer.bloodBondPartnerId)
+    if (bonded && !bonded.isAlive && !deathReasons[bonded.id]) {
+      deathReasons[bonded.id] = `morreu pela ligação de sangue com ${deadPlayer.name}`
+      registerAllSecondaryDeaths(deathReasons, updatedPlayers, bonded.id, deadPlayer.name, processed)
+    }
+  }
+}
+
 export interface ActionResult {
   deadPlayers: string[]
   updatedPlayers: Player[]
   messages: string[]
   investigations: { [playerId: string]: any }
+  deathReasons: { [playerId: string]: string }
 }
 
 export function resolveNightActions(players: Player[], actions: GameAction[]): ActionResult {
@@ -21,6 +55,7 @@ export function resolveNightActions(players: Player[], actions: GameAction[]): A
   const deadPlayers: string[] = []
   const messages: string[] = []
   const investigations: { [playerId: string]: any } = {}
+  const deathReasons: { [playerId: string]: string } = {}
 
   console.log('Resolvendo ações noturnas:', {
     totalPlayers: players.length,
@@ -88,17 +123,20 @@ export function resolveNightActions(players: Player[], actions: GameAction[]): A
   // 3. Processar tentativas de morte
   const killTargets = new Set<string>()
   const healedPlayers = new Set<string>()
+  const killActionsByTarget = new Map<string, GameAction>() // To track who killed whom
 
   // Coletar todos os alvos de morte
   kills.forEach(action => {
     if (action.targetId) {
       killTargets.add(action.targetId)
+      killActionsByTarget.set(action.targetId, action)
     }
   })
 
   poisons.forEach(action => {
     if (action.targetId) {
       killTargets.add(action.targetId)
+      killActionsByTarget.set(action.targetId, action)
     }
   })
 
@@ -130,11 +168,30 @@ export function resolveNightActions(players: Player[], actions: GameAction[]): A
       )
       deadPlayers.push(targetId)
 
+      // Register death reason
+      const killAction = killActionsByTarget.get(targetId)
+      if (killAction) {
+        const killer = updatedPlayers.find(p => p.id === killAction.playerId)
+        if (killer) {
+          if (killAction.type === ActionType.POISON) {
+            deathReasons[targetId] = 'envenenado pela bruxa'
+          } else if (killer.character === CharacterClass.VAMPIRO) {
+            deathReasons[targetId] = 'morto pelo vampiro'
+          } else if (killer.character === CharacterClass.HEROI) {
+            deathReasons[targetId] = 'morto pelo herói'
+          } else {
+            deathReasons[targetId] = 'morto pelos lobisomens'
+          }
+        }
+      }
+
       // Aplicar mortes por amor e ligação de sangue
       const loveDeath = applyLoveDeath(updatedPlayers, targetId)
       const bloodDeath = applyBloodBondDeath(updatedPlayers, targetId)
-
       deadPlayers.push(...loveDeath, ...bloodDeath)
+      
+      // Register all secondary death reasons recursively
+      registerAllSecondaryDeaths(deathReasons, updatedPlayers, targetId, target.name)
 
     } else if (hasTalisman && !isProtected) {
       // Talismã perde sua proteção apenas se não estiver protegido pelo guardião
@@ -148,7 +205,44 @@ export function resolveNightActions(players: Player[], actions: GameAction[]): A
     }
   })
 
-  // 4. Processar tiros do Bala de Prata
+  // 4. Processar morte do Herói se matou alguém bom
+  kills.forEach(action => {
+    if (action.targetId) {
+      const killer = updatedPlayers.find(p => p.id === action.playerId)
+      const target = updatedPlayers.find(p => p.id === action.targetId)
+      
+      // Verificar se o assassino é o Herói e se o alvo morreu
+      if (killer && target && killer.character === CharacterClass.HEROI && !target.isAlive && killer.isAlive) {
+        // Verificar se o alvo era bom
+        const isTargetGood = [
+          CharacterClass.ALDEAO, CharacterClass.MEDIUM, CharacterClass.VIDENTE,
+          CharacterClass.CUPIDO, CharacterClass.TALISMA, CharacterClass.BRUXA,
+          CharacterClass.BALA_DE_PRATA, CharacterClass.GUARDIAO, CharacterClass.HEMOMANTE,
+          CharacterClass.HEROI
+        ].includes(target.character)
+        
+        if (isTargetGood) {
+          // Matar o Herói
+          updatedPlayers = updatedPlayers.map(p =>
+            p.id === killer.id ? { ...p, isAlive: false } : p
+          )
+          deadPlayers.push(killer.id)
+          deathReasons[killer.id] = 'morreu por matar um inocente'
+          messages.push(`${killer.name} matou ${target.name}, que era inocente, e morreu!`)
+          
+          // Aplicar mortes secundárias do Herói
+          const loveDeath = applyLoveDeath(updatedPlayers, killer.id)
+          const bloodDeath = applyBloodBondDeath(updatedPlayers, killer.id)
+          deadPlayers.push(...loveDeath, ...bloodDeath)
+          
+          // Register all secondary death reasons recursively
+          registerAllSecondaryDeaths(deathReasons, updatedPlayers, killer.id, killer.name)
+        }
+      }
+    }
+  })
+
+  // 5. Processar tiros do Bala de Prata
   shoots.forEach(action => {
     if (action.targetId) {
       const shooter = updatedPlayers.find(p => p.id === action.playerId)
@@ -167,10 +261,16 @@ export function resolveNightActions(players: Player[], actions: GameAction[]): A
           deadPlayers.push(target.id)
           messages.push(`${shooter.name} atirou em ${target.name} com sua Bala de Prata!`)
           
+          // Register death reason
+          deathReasons[target.id] = 'morto pela bala de prata'
+          
           // Aplicar mortes por amor e ligação de sangue
           const loveDeath = applyLoveDeath(updatedPlayers, target.id)
           const bloodDeath = applyBloodBondDeath(updatedPlayers, target.id)
           deadPlayers.push(...loveDeath, ...bloodDeath)
+          
+          // Register all secondary death reasons recursively
+          registerAllSecondaryDeaths(deathReasons, updatedPlayers, target.id, target.name)
         } else {
           // Talismã protege
           updatedPlayers = updatedPlayers.map(p =>
@@ -182,7 +282,7 @@ export function resolveNightActions(players: Player[], actions: GameAction[]): A
     }
   })
 
-  // 5. Aplicar infecções
+  // 6. Aplicar infecções
   infections.forEach(action => {
     if (action.targetId) {
       const target = updatedPlayers.find(p => p.id === action.targetId)
@@ -194,7 +294,7 @@ export function resolveNightActions(players: Player[], actions: GameAction[]): A
     }
   })
 
-  // 6. Aplicar silenciamentos
+  // 7. Aplicar silenciamentos
   silences.forEach(action => {
     if (action.targetId) {
       const target = updatedPlayers.find(p => p.id === action.targetId)
@@ -207,7 +307,7 @@ export function resolveNightActions(players: Player[], actions: GameAction[]): A
     }
   })
 
-  // 7. Processar investigações
+  // 8. Processar investigações
   investigations_actions.forEach(action => {
     if (action.targetId) {
       const investigator = updatedPlayers.find(p => p.id === action.playerId)
@@ -266,11 +366,17 @@ export function resolveNightActions(players: Player[], actions: GameAction[]): A
             )
             deadPlayers.push(target.id)
             messages.push(`${voodoo.name} acertou a classe de ${target.name} e o eliminou!`)
+            
+            // Register death reason
+            deathReasons[target.id] = 'eliminado pelo lobisomem voodoo'
 
             // Aplicar mortes secundárias
             const loveDeath = applyLoveDeath(updatedPlayers, target.id)
             const bloodDeath = applyBloodBondDeath(updatedPlayers, target.id)
             deadPlayers.push(...loveDeath, ...bloodDeath)
+            
+            // Register all secondary death reasons recursively
+            registerAllSecondaryDeaths(deathReasons, updatedPlayers, target.id, target.name)
           }
         } else {
           // Errou - morre
@@ -279,11 +385,17 @@ export function resolveNightActions(players: Player[], actions: GameAction[]): A
           )
           deadPlayers.push(voodoo.id)
           messages.push(`${voodoo.name} errou a classe de ${target.name} e morreu!`)
+          
+          // Register death reason
+          deathReasons[voodoo.id] = 'morreu ao errar o palpite voodoo'
 
           // Aplicar mortes secundárias
           const loveDeath = applyLoveDeath(updatedPlayers, voodoo.id)
           const bloodDeath = applyBloodBondDeath(updatedPlayers, voodoo.id)
           deadPlayers.push(...loveDeath, ...bloodDeath)
+          
+          // Register all secondary death reasons recursively
+          registerAllSecondaryDeaths(deathReasons, updatedPlayers, voodoo.id, voodoo.name)
         }
       }
     }
@@ -301,7 +413,8 @@ export function resolveNightActions(players: Player[], actions: GameAction[]): A
     deadPlayers: [...new Set(deadPlayers)], // Remove duplicatas
     updatedPlayers,
     messages,
-    investigations
+    investigations,
+    deathReasons
   }
 }
 
@@ -316,6 +429,7 @@ export function processSilverBulletShot(
   const deadPlayers: string[] = []
   const messages: string[] = []
   const investigations: { [playerId: string]: any } = {}
+  const deathReasons: { [playerId: string]: string } = {}
 
   const shooter = updatedPlayers.find(p => p.id === silverBulletPlayerId)
   const target = updatedPlayers.find(p => p.id === targetId)
@@ -331,10 +445,16 @@ export function processSilverBulletShot(
       deadPlayers.push(targetId)
       messages.push(`${shooter.name} atirou em ${target.name} com sua Bala de Prata!`)
       
+      // Register death reason
+      deathReasons[targetId] = 'morto pela bala de prata'
+      
       // Aplicar mortes por amor e ligação de sangue
       const loveDeath = applyLoveDeath(updatedPlayers, targetId)
       const bloodDeath = applyBloodBondDeath(updatedPlayers, targetId)
       deadPlayers.push(...loveDeath, ...bloodDeath)
+      
+      // Register all secondary death reasons recursively
+      registerAllSecondaryDeaths(deathReasons, updatedPlayers, targetId, target.name)
     } else {
       // Talismã protege
       updatedPlayers = updatedPlayers.map(p =>
@@ -348,6 +468,7 @@ export function processSilverBulletShot(
     deadPlayers: [...new Set(deadPlayers)],
     updatedPlayers,
     messages,
-    investigations
+    investigations,
+    deathReasons
   }
 }

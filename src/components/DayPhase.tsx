@@ -13,6 +13,7 @@ interface DayPhaseProps {
   deadToday: string[]
   nightMessages: string[]
   investigations: { [playerId: string]: any }
+  deathReasons: { [playerId: string]: string }
   needsMayorReelection?: boolean
   previousMayorName?: string
   pendingSilverBulletPlayer?: Player
@@ -39,6 +40,7 @@ export default function DayPhase({
   deadToday,
   nightMessages,
   investigations,
+  deathReasons,
   needsMayorReelection = false,
   previousMayorName = '',
   pendingSilverBulletPlayer,
@@ -256,9 +258,11 @@ const handleMayorTieChoice = (expelledPlayerId: string) => {
                   <div className="bg-red-900/30 border border-red-700 rounded-lg p-6">
                     {deadToday.map(deadId => {
                       const deadPlayer = players.find(p => p.id === deadId)
+                      const deathReason = deathReasons[deadId]
                       return deadPlayer ? (
                         <div key={deadId} className="text-lg mb-2">
                           ⚰️ <strong>{deadPlayer.name}</strong>
+                          {deathReason ? ` (${deathReason})` : ''}
                           {/* Não mostrar a classe de quem morreu */}
                         </div>
                       ) : null

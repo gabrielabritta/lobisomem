@@ -1355,6 +1355,66 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
                 )
               }
 
+              // Special screen for Traitor showing werewolves
+              if (character === CharacterClass.TRAIDOR) {
+                const aliveWerewolves = alivePlayers.filter(p => isWerewolf(p.character))
+                
+                return (
+                  <div className="space-y-6">
+                    <div className="text-center">
+                      <h3 className="text-xl font-semibold mb-2">
+                        🗡️ {currentPlayer.name} - Traidor
+                      </h3>
+                      <p className="text-dark-300 mb-4">
+                        Você é um Traidor. Você deve ajudar os lobisomens a vencer.
+                      </p>
+                    </div>
+
+                    {aliveWerewolves.length > 0 ? (
+                      <div className="bg-red-900/30 border border-red-700 rounded-lg p-6">
+                        <h4 className="font-semibold mb-4 text-red-300 text-lg">🐺 Lobisomens Vivos:</h4>
+                        <div className="space-y-3">
+                          {aliveWerewolves.map(werewolf => (
+                            <div key={werewolf.id} className="bg-dark-700 rounded-lg p-4 border border-red-600">
+                              <div className="text-red-100 font-bold text-xl">
+                                {werewolf.name}
+                              </div>
+                              <div className="text-red-300 text-sm mt-1">
+                                {CHARACTER_NAMES[werewolf.character]}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-gray-900/30 border border-gray-700 rounded-lg p-4">
+                        <p className="text-gray-300 text-center">
+                          ⚠️ Não há lobisomens vivos no momento.
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="bg-blue-900/30 border border-blue-700 rounded-lg p-4">
+                      <p className="text-blue-300 font-semibold mb-2">📜 Seu Objetivo:</p>
+                      <p className="text-blue-200 text-sm">
+                        Você vence junto com os lobisomens. Ajude-os a eliminar os inocentes 
+                        sem revelar sua identidade. Use informações que você descobrir para ajudar 
+                        os lobisomens a vencer.
+                      </p>
+                    </div>
+
+                    <div className="text-center">
+                      <button
+                        onClick={advanceToNextPlayerOrStep}
+                        className="btn-primary"
+                      >
+                        Continuar
+                      </button>
+                    </div>
+                  </div>
+                )
+              }
+
               return (
                 <div className="space-y-6 text-center">
                   <h3 className="text-xl font-semibold mb-2">
