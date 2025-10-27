@@ -292,10 +292,11 @@ interface MediumInterfaceProps {
   medium: Player
   allPlayers: Player[]
   usedAbilities: { [playerId: string]: string[] }
+  silencedThisNight: string | null
   onMediumAction: (useAbility: boolean, targetId?: string) => void
 }
 
-function MediumInterface({ medium, allPlayers, usedAbilities, onMediumAction }: MediumInterfaceProps) {
+function MediumInterface({ medium, allPlayers, usedAbilities, silencedThisNight, onMediumAction }: MediumInterfaceProps) {
   const [selectedTarget, setSelectedTarget] = useState<string>('')
   const [showTargetSelection, setShowTargetSelection] = useState(false)
   const [investigationResult, setInvestigationResult] = useState<string | null>(null)
@@ -367,6 +368,13 @@ function MediumInterface({ medium, allPlayers, usedAbilities, onMediumAction }: 
           <h3 className="text-xl font-semibold mb-2">
             🔮 {medium.name} - Médium
           </h3>
+          
+          {(medium.isSilenced || medium.id === silencedThisNight) && (
+            <div className="bg-yellow-900/30 border border-yellow-700 text-yellow-100 p-4 rounded-lg text-center mb-4">
+              🤐 Você foi silenciado e não pode falar no próximo dia!
+            </div>
+          )}
+          
           <p className="text-dark-300 mb-4">
             Você pode usar sua habilidade para ver a classe de alguém que morreu.
           </p>
@@ -482,10 +490,11 @@ function MediumInterface({ medium, allPlayers, usedAbilities, onMediumAction }: 
 interface VidenteInterfaceProps {
   vidente: Player
   alivePlayers: Player[]
+  silencedThisNight: string | null
   onVidenteAction: (useAbility: boolean, targetId?: string) => void
 }
 
-function VidenteInterface({ vidente, alivePlayers, onVidenteAction }: VidenteInterfaceProps) {
+function VidenteInterface({ vidente, alivePlayers, silencedThisNight, onVidenteAction }: VidenteInterfaceProps) {
   const [selectedTarget, setSelectedTarget] = useState<string>('')
   const [showTargetSelection, setShowTargetSelection] = useState(false)
   const [investigationResult, setInvestigationResult] = useState<string | null>(null)
@@ -561,6 +570,13 @@ function VidenteInterface({ vidente, alivePlayers, onVidenteAction }: VidenteInt
           <h3 className="text-xl font-semibold mb-2">
             👁️ {vidente.name} - Vidente
           </h3>
+          
+          {(vidente.isSilenced || vidente.id === silencedThisNight) && (
+            <div className="bg-yellow-900/30 border border-yellow-700 text-yellow-100 p-4 rounded-lg text-center mb-4">
+              🤐 Você foi silenciado e não pode falar no próximo dia!
+            </div>
+          )}
+          
           <p className="text-dark-300 mb-4">
             Você pode usar sua habilidade para ver a índole de um jogador.
           </p>
@@ -645,14 +661,23 @@ function VidenteInterface({ vidente, alivePlayers, onVidenteAction }: VidenteInt
 interface GagWerewolfInterfaceProps {
   gagWerewolf: Player
   players: Player[]
+  usedAbilities: { [playerId: string]: string[] }
   onGagAction: (useAbility: boolean, targetId?: string) => void
 }
 
-function GagWerewolfInterface({ gagWerewolf, players, onGagAction }: GagWerewolfInterfaceProps) {
+function GagWerewolfInterface({ gagWerewolf, players, usedAbilities, onGagAction }: GagWerewolfInterfaceProps) {
   const [selectedTarget, setSelectedTarget] = useState<string>('')
   const [showTargetSelection, setShowTargetSelection] = useState(false)
 
-  const availableTargets = players.filter(p => p.id !== gagWerewolf.id && p.isAlive)
+  // Verificar se já usou a habilidade
+  const hasUsedAbility = usedAbilities[gagWerewolf.id]?.includes('gag_ability') || false
+
+  // Filtrar alvos: não pode ser lobisomem
+  const availableTargets = players.filter(p => 
+    p.id !== gagWerewolf.id && 
+    p.isAlive && 
+    !isWerewolf(p.character)
+  )
 
   const handleUseAbility = () => {
     if (selectedTarget) {
@@ -672,10 +697,18 @@ function GagWerewolfInterface({ gagWerewolf, players, onGagAction }: GagWerewolf
           <p className="text-dark-300 mb-4">
             Deseja usar sua habilidade especial para amordaçar alguém?
           </p>
-          <div className="bg-yellow-900/30 border border-yellow-700 rounded-lg p-4 mb-4">
-            <p className="text-yellow-300 font-semibold">⚠️ ATENÇÃO:</p>
-            <p className="text-yellow-200 text-sm">
-              A pessoa amordaçada não poderá falar no próximo dia. Esta habilidade pode ser usada apenas uma vez por partida.
+          <div className={`border rounded-lg p-4 mb-4 ${
+            hasUsedAbility 
+              ? 'bg-red-900/30 border-red-700'
+              : 'bg-yellow-900/30 border-yellow-700'
+          }`}>
+            <p className={`font-semibold ${hasUsedAbility ? 'text-red-300' : 'text-yellow-300'}`}>
+              {hasUsedAbility ? '❌ Habilidade Já Usada' : '⚠️ ATENÇÃO:'}
+            </p>
+            <p className={`text-sm ${hasUsedAbility ? 'text-red-200' : 'text-yellow-200'}`}>
+              {hasUsedAbility 
+                ? 'Você já usou sua habilidade de amordaçar nesta partida.'
+                : 'A pessoa amordaçada não poderá falar no próximo dia. Esta habilidade pode ser usada apenas uma vez por partida.'}
             </p>
           </div>
         </div>
@@ -685,14 +718,16 @@ function GagWerewolfInterface({ gagWerewolf, players, onGagAction }: GagWerewolf
             onClick={() => onGagAction(false)}
             className="btn-secondary"
           >
-            ❌ Não Usar Habilidade
+            {hasUsedAbility ? 'Continuar' : '❌ Não Usar Habilidade'}
           </button>
-          <button
-            onClick={() => setShowTargetSelection(true)}
-            className="btn-primary bg-purple-600 hover:bg-purple-700"
-          >
-            🤐 Usar Habilidade de Amordaçar
-          </button>
+          {!hasUsedAbility && (
+            <button
+              onClick={() => setShowTargetSelection(true)}
+              className="btn-primary bg-purple-600 hover:bg-purple-700"
+            >
+              🤐 Usar Habilidade de Amordaçar
+            </button>
+          )}
         </div>
       </div>
     )
@@ -753,10 +788,11 @@ function GagWerewolfInterface({ gagWerewolf, players, onGagAction }: GagWerewolf
 interface VoodooWerewolfInterfaceProps {
   voodooWerewolf: Player
   players: Player[]
+  silencedThisNight: string | null
   onVoodooAction: (useAbility: boolean, guessedClass?: CharacterClass, targetId?: string) => void
 }
 
-function VoodooWerewolfInterface({ voodooWerewolf, players, onVoodooAction }: VoodooWerewolfInterfaceProps) {
+function VoodooWerewolfInterface({ voodooWerewolf, players, silencedThisNight, onVoodooAction }: VoodooWerewolfInterfaceProps) {
   const [selectedTarget, setSelectedTarget] = useState<string>('')
   const [selectedClass, setSelectedClass] = useState<CharacterClass | null>(null)
   const [showTargetSelection, setShowTargetSelection] = useState(false)
@@ -780,6 +816,13 @@ function VoodooWerewolfInterface({ voodooWerewolf, players, onVoodooAction }: Vo
           <h3 className="text-xl font-semibold mb-2">
             🐺 {voodooWerewolf.name} - Lobisomem Voodoo
           </h3>
+          
+          {(voodooWerewolf.isSilenced || voodooWerewolf.id === silencedThisNight) && (
+            <div className="bg-yellow-900/30 border border-yellow-700 text-yellow-100 p-4 rounded-lg text-center mb-4">
+              🤐 Você foi silenciado e não pode falar no próximo dia!
+            </div>
+          )}
+          
           <p className="text-dark-300 mb-4">
             Deseja usar sua habilidade especial para matar alguém?
           </p>
@@ -890,6 +933,7 @@ function VoodooWerewolfInterface({ voodooWerewolf, players, onVoodooAction }: Vo
 
 type NightStep =
   | 'werewolves'
+  | 'gag_werewolf'
   | 'occult'
   | 'player_actions'
   | 'pass_device'
@@ -913,6 +957,7 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
   const [usedAbilities, setUsedAbilities] = useState<{ [playerId: string]: string[] }>(gameState?.usedAbilities || {})
   const [investigationResults, setInvestigationResults] = useState<{ playerId: string, result: string, type: 'vidente' | 'medium' }[]>([])
   const [updatedWitchPotions, setUpdatedWitchPotions] = useState(gameState?.witchPotions || { healingPotion: true, poisonPotion: true })
+  const [silencedThisNight, setSilencedThisNight] = useState<string | null>(null)
 
 
 
@@ -934,8 +979,7 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
       CharacterClass.MEDIUM,
       CharacterClass.HEMOMANTE,
       CharacterClass.HEROI,
-      CharacterClass.LOBISOMEM_VOODOO,
-      CharacterClass.LOBISOMEM_MORDACA
+      CharacterClass.LOBISOMEM_VOODOO
     ]
     return actionCharacters.includes(player.character) ||
            (player.character === CharacterClass.OCCULT && player.originalCharacter &&
@@ -1006,8 +1050,10 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
 
     setSelectedTarget('')
 
-    // Próximo passo baseado na disponibilidade de occult
-    if (occult) {
+    // Próximo passo baseado na disponibilidade de gagWerewolf, occult
+    if (gagWerewolf) {
+      setCurrentStep('gag_werewolf')
+    } else if (occult) {
       setCurrentStep('occult')
     } else if (playersInPlayerActionsStep.length > 0) {
       setCurrentStep('player_actions')
@@ -1035,14 +1081,36 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
   }
 
   const handleGagAction = (useAbility: boolean, targetId?: string) => {
-    const currentPlayer = playersInPlayerActionsStep[currentPlayerIndex]
-    
     if (useAbility && targetId) {
-      addAction(currentPlayer.id, ActionType.SILENCE, targetId)
+      addAction(gagWerewolf!.id, ActionType.SILENCE, targetId)
+      
+      // Marcar habilidade como usada
+      setUsedAbilities(prev => ({
+        ...prev,
+        [gagWerewolf!.id]: [...(prev[gagWerewolf!.id] || []), 'gag_ability']
+      }))
+      
+      // Registrar jogador amordaçado nesta noite
+      setSilencedThisNight(targetId)
     }
 
     setSelectedTarget('')
-    advanceToNextPlayerOrStep()
+
+    // Avançar para próxima fase
+    if (occult) {
+      setCurrentStep('occult')
+    } else if (playersInPlayerActionsStep.length > 0) {
+      setCurrentStep('player_actions')
+    } else if (witch) {
+      setCurrentStep('witch')
+    } else {
+      // Skip MasterPassScreen in debug mode when no witch
+      if (gameState?.config.debugMode) {
+        setCurrentStep('complete')
+      } else {
+        setCurrentStep('master_pass')
+      }
+    }
   }
 
 
@@ -1289,6 +1357,15 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
           </div>
         )}
 
+        {currentStep === 'gag_werewolf' && gagWerewolf && (
+          <GagWerewolfInterface
+            gagWerewolf={gagWerewolf}
+            players={alivePlayers}
+            usedAbilities={usedAbilities}
+            onGagAction={handleGagAction}
+          />
+        )}
+
         {currentStep === 'pass_device' && (
           <PassDeviceScreen
             nextPlayerName={playersInPlayerActionsStep[currentPlayerIndex + 1].name}
@@ -1312,6 +1389,7 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
                         medium={currentPlayer}
                         allPlayers={players}
                         usedAbilities={usedAbilities}
+                        silencedThisNight={silencedThisNight}
                         onMediumAction={handleMediumAction}
                       />
                     ) : (currentPlayer.character === CharacterClass.VIDENTE ||
@@ -1320,6 +1398,7 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
                       <VidenteInterface
                         vidente={currentPlayer}
                         alivePlayers={alivePlayers}
+                        silencedThisNight={silencedThisNight}
                         onVidenteAction={handleVidenteAction}
                       />
                     ) : (currentPlayer.character === CharacterClass.LOBISOMEM_VOODOO ||
@@ -1328,15 +1407,8 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
                       <VoodooWerewolfInterface
                         voodooWerewolf={currentPlayer}
                         players={alivePlayers}
+                        silencedThisNight={silencedThisNight}
                         onVoodooAction={handleVoodooAction}
-                      />
-                    ) : (currentPlayer.character === CharacterClass.LOBISOMEM_MORDACA ||
-                      (currentPlayer.character === CharacterClass.OCCULT &&
-                        currentPlayer.originalCharacter === CharacterClass.LOBISOMEM_MORDACA)) ? (
-                      <GagWerewolfInterface
-                        gagWerewolf={currentPlayer}
-                        players={alivePlayers}
-                        onGagAction={handleGagAction}
                       />
                     ) : (
                       <div className="space-y-6">
@@ -1360,8 +1432,8 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
                           )}
                         </div>
 
-                        {currentPlayer.isSilenced && (
-                          <div className="bg-yellow-600 text-yellow-100 p-4 rounded-lg text-center">
+                        {(currentPlayer.isSilenced || currentPlayer.id === silencedThisNight) && (
+                          <div className="bg-yellow-900/30 border border-yellow-700 text-yellow-100 p-4 rounded-lg text-center">
                             🤐 Você foi silenciado e não pode falar no próximo dia!
                           </div>
                         )}
@@ -1432,6 +1504,13 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
                 return (
                   <div className="space-y-6 text-center">
                     <h3 className="text-xl font-semibold mb-2">{currentPlayer.name}</h3>
+                    
+                    {(currentPlayer.isSilenced || currentPlayer.id === silencedThisNight) && (
+                      <div className="bg-yellow-900/30 border border-yellow-700 text-yellow-100 p-4 rounded-lg text-center mb-4">
+                        🤐 Você foi silenciado e não pode falar no próximo dia!
+                      </div>
+                    )}
+                    
                     <p className="text-dark-300 mb-4">Você é um lobisomem. A alcateia já escolheu a vítima.</p>
                     <button onClick={advanceToNextPlayerOrStep} className="btn-primary">
                       Continuar
@@ -1444,6 +1523,13 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
                 return (
                   <div className="space-y-6 text-center">
                     <h3 className="text-xl font-semibold mb-2">{currentPlayer.name}</h3>
+                    
+                    {(currentPlayer.isSilenced || currentPlayer.id === silencedThisNight) && (
+                      <div className="bg-yellow-900/30 border border-yellow-700 text-yellow-100 p-4 rounded-lg text-center mb-4">
+                        🤐 Você foi silenciado e não pode falar no próximo dia!
+                      </div>
+                    )}
+                    
                     <p className="text-dark-300 mb-4">Você é a Bruxa. Seu turno será no final da noite.</p>
                     <button onClick={advanceToNextPlayerOrStep} className="btn-primary">
                       Continuar
@@ -1456,6 +1542,13 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
                 return (
                   <div className="space-y-6 text-center">
                     <h3 className="text-xl font-semibold mb-2">{currentPlayer.name}</h3>
+                    
+                    {(currentPlayer.isSilenced || currentPlayer.id === silencedThisNight) && (
+                      <div className="bg-yellow-900/30 border border-yellow-700 text-yellow-100 p-4 rounded-lg text-center mb-4">
+                        🤐 Você foi silenciado e não pode falar no próximo dia!
+                      </div>
+                    )}
+                    
                     <p className="text-dark-300 mb-4">Você é o Ocultista. Você age em um momento diferente.</p>
                     <button onClick={advanceToNextPlayerOrStep} className="btn-primary">
                       Continuar
@@ -1474,6 +1567,13 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
                       <h3 className="text-xl font-semibold mb-2">
                         🗡️ {currentPlayer.name} - Traidor
                       </h3>
+                      
+                      {(currentPlayer.isSilenced || currentPlayer.id === silencedThisNight) && (
+                        <div className="bg-yellow-900/30 border border-yellow-700 text-yellow-100 p-4 rounded-lg text-center mb-4">
+                          🤐 Você foi silenciado e não pode falar no próximo dia!
+                        </div>
+                      )}
+                      
                       <p className="text-dark-300 mb-4">
                         Você é um Traidor. Você deve ajudar os lobisomens a vencer.
                       </p>
@@ -1529,6 +1629,13 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
                   <h3 className="text-xl font-semibold mb-2">
                     {currentPlayer.name}
                   </h3>
+                  
+                  {(currentPlayer.isSilenced || currentPlayer.id === silencedThisNight) && (
+                    <div className="bg-yellow-900/30 border border-yellow-700 text-yellow-100 p-4 rounded-lg text-center mb-4">
+                      🤐 Você foi silenciado e não pode falar no próximo dia!
+                    </div>
+                  )}
+                  
                   <p className="text-dark-300 mb-4">
                     Você não tem nenhuma ação para realizar esta noite. Você dorme profundamente.
                   </p>
