@@ -63,12 +63,12 @@ function WitchInterface({ witch, actions, players, witchPotions, onWitchAction, 
       }
     })
     
-    // Determinar quem realmente morrerá
-    const actuallyDyingPlayers: Player[] = []
+    // Determinar quem realmente morrerá usando Map para evitar duplicatas
+    const actuallyDyingPlayersMap = new Map<string, Player>()
     kills.forEach(action => {
       if (action.targetId) {
         const target = players.find(p => p.id === action.targetId)
-        if (target && target.isAlive) {
+        if (target && target.isAlive && !actuallyDyingPlayersMap.has(action.targetId)) {
           const isProtected = protectedPlayers.has(action.targetId)
           const hasTalisman = target.hasProtection && target.character === CharacterClass.TALISMA
           
@@ -80,13 +80,13 @@ function WitchInterface({ witch, actions, players, witchPotions, onWitchAction, 
           // 1. Não estiver protegido E não tiver talismã (mortes normais)
           // 2. OU for ação do voodoo que acertou a classe (ignora proteções)
           if ((!isProtected && !hasTalisman) || isVoodooKill) {
-            actuallyDyingPlayers.push(target)
+            actuallyDyingPlayersMap.set(action.targetId, target)
           }
         }
       }
     })
     
-    return actuallyDyingPlayers
+    return Array.from(actuallyDyingPlayersMap.values())
   }
 
   const dyingPlayers = getActuallyDyingPlayers()
@@ -642,6 +642,114 @@ function VidenteInterface({ vidente, alivePlayers, onVidenteAction }: VidenteInt
   )
 }
 
+interface GagWerewolfInterfaceProps {
+  gagWerewolf: Player
+  players: Player[]
+  onGagAction: (useAbility: boolean, targetId?: string) => void
+}
+
+function GagWerewolfInterface({ gagWerewolf, players, onGagAction }: GagWerewolfInterfaceProps) {
+  const [selectedTarget, setSelectedTarget] = useState<string>('')
+  const [showTargetSelection, setShowTargetSelection] = useState(false)
+
+  const availableTargets = players.filter(p => p.id !== gagWerewolf.id && p.isAlive)
+
+  const handleUseAbility = () => {
+    if (selectedTarget) {
+      onGagAction(true, selectedTarget)
+    } else {
+      alert('Selecione um alvo!')
+    }
+  }
+
+  if (!showTargetSelection) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center">
+          <h3 className="text-xl font-semibold mb-2">
+            🐺 {gagWerewolf.name} - Lobisomem Mordaça
+          </h3>
+          <p className="text-dark-300 mb-4">
+            Deseja usar sua habilidade especial para amordaçar alguém?
+          </p>
+          <div className="bg-yellow-900/30 border border-yellow-700 rounded-lg p-4 mb-4">
+            <p className="text-yellow-300 font-semibold">⚠️ ATENÇÃO:</p>
+            <p className="text-yellow-200 text-sm">
+              A pessoa amordaçada não poderá falar no próximo dia. Esta habilidade pode ser usada apenas uma vez por partida.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex justify-center space-x-4">
+          <button
+            onClick={() => onGagAction(false)}
+            className="btn-secondary"
+          >
+            ❌ Não Usar Habilidade
+          </button>
+          <button
+            onClick={() => setShowTargetSelection(true)}
+            className="btn-primary bg-purple-600 hover:bg-purple-700"
+          >
+            🤐 Usar Habilidade de Amordaçar
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="text-center">
+        <h3 className="text-xl font-semibold mb-2">
+          🐺 {gagWerewolf.name} - Lobisomem Mordaça
+        </h3>
+        <p className="text-dark-300 mb-4">
+          Escolha seu alvo para amordaçar:
+        </p>
+      </div>
+
+      {/* Seleção de alvo */}
+      <div className="space-y-4">
+        <h4 className="font-semibold text-center">🎯 Escolha quem amordaçar:</h4>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {availableTargets.map(player => (
+            <button
+              key={player.id}
+              onClick={() => setSelectedTarget(player.id)}
+              className={`p-4 rounded-lg border transition-all ${
+                selectedTarget === player.id
+                  ? 'bg-purple-600 border-purple-500'
+                  : 'bg-dark-700 border-dark-600 hover:bg-dark-600'
+              }`}
+            >
+              <div className="font-medium">{player.name}</div>
+              <div className="text-sm text-dark-300 mt-1">🤐 Amordaçar</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Botões de ação */}
+      <div className="flex justify-center space-x-4">
+        <button
+          onClick={() => setShowTargetSelection(false)}
+          className="btn-secondary"
+        >
+          ← Voltar
+        </button>
+        <button
+          onClick={handleUseAbility}
+          disabled={!selectedTarget}
+          className="btn-primary bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          🤐 Executar Amordaçar
+        </button>
+      </div>
+    </div>
+  )
+}
+
 interface VoodooWerewolfInterfaceProps {
   voodooWerewolf: Player
   players: Player[]
@@ -782,8 +890,6 @@ function VoodooWerewolfInterface({ voodooWerewolf, players, onVoodooAction }: Vo
 
 type NightStep =
   | 'werewolves'
-  | 'voodoo_werewolf'
-  | 'gag_werewolf'
   | 'occult'
   | 'player_actions'
   | 'pass_device'
@@ -827,7 +933,9 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
       CharacterClass.ZUMBI,
       CharacterClass.MEDIUM,
       CharacterClass.HEMOMANTE,
-      CharacterClass.HEROI
+      CharacterClass.HEROI,
+      CharacterClass.LOBISOMEM_VOODOO,
+      CharacterClass.LOBISOMEM_MORDACA
     ]
     return actionCharacters.includes(player.character) ||
            (player.character === CharacterClass.OCCULT && player.originalCharacter &&
@@ -898,12 +1006,8 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
 
     setSelectedTarget('')
 
-    // Próximo passo baseado nos lobisomens especiais disponíveis
-    if (voodooWerewolf) {
-      setCurrentStep('voodoo_werewolf')
-    } else if (gagWerewolf) {
-      setCurrentStep('gag_werewolf')
-    } else if (occult) {
+    // Próximo passo baseado na disponibilidade de occult
+    if (occult) {
       setCurrentStep('occult')
     } else if (playersInPlayerActionsStep.length > 0) {
       setCurrentStep('player_actions')
@@ -920,28 +1024,25 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
   }
 
   const handleVoodooAction = (useAbility: boolean, guessedClass?: CharacterClass, targetId?: string) => {
+    const currentPlayer = playersInPlayerActionsStep[currentPlayerIndex]
+    
     if (useAbility && targetId && guessedClass) {
-      addAction(voodooWerewolf!.id, ActionType.KILL, targetId, { guessedClass })
+      addAction(currentPlayer.id, ActionType.KILL, targetId, { guessedClass })
     }
 
     setSelectedTarget('')
+    advanceToNextPlayerOrStep()
+  }
 
-    if (gagWerewolf) {
-      setCurrentStep('gag_werewolf')
-    } else if (occult) {
-      setCurrentStep('occult')
-    } else if (playersInPlayerActionsStep.length > 0) {
-      setCurrentStep('player_actions')
-    } else if (witch) {
-      setCurrentStep('witch')
-    } else {
-      // Skip MasterPassScreen in debug mode when no witch
-      if (gameState?.config.debugMode) {
-        setCurrentStep('complete')
-      } else {
-        setCurrentStep('master_pass')
-      }
+  const handleGagAction = (useAbility: boolean, targetId?: string) => {
+    const currentPlayer = playersInPlayerActionsStep[currentPlayerIndex]
+    
+    if (useAbility && targetId) {
+      addAction(currentPlayer.id, ActionType.SILENCE, targetId)
     }
+
+    setSelectedTarget('')
+    advanceToNextPlayerOrStep()
   }
 
 
@@ -1188,14 +1289,6 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
           </div>
         )}
 
-        {currentStep === 'voodoo_werewolf' && voodooWerewolf && (
-          <VoodooWerewolfInterface
-            voodooWerewolf={voodooWerewolf}
-            players={alivePlayers}
-            onVoodooAction={handleVoodooAction}
-          />
-        )}
-
         {currentStep === 'pass_device' && (
           <PassDeviceScreen
             nextPlayerName={playersInPlayerActionsStep[currentPlayerIndex + 1].name}
@@ -1228,6 +1321,22 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
                         vidente={currentPlayer}
                         alivePlayers={alivePlayers}
                         onVidenteAction={handleVidenteAction}
+                      />
+                    ) : (currentPlayer.character === CharacterClass.LOBISOMEM_VOODOO ||
+                      (currentPlayer.character === CharacterClass.OCCULT &&
+                        currentPlayer.originalCharacter === CharacterClass.LOBISOMEM_VOODOO)) ? (
+                      <VoodooWerewolfInterface
+                        voodooWerewolf={currentPlayer}
+                        players={alivePlayers}
+                        onVoodooAction={handleVoodooAction}
+                      />
+                    ) : (currentPlayer.character === CharacterClass.LOBISOMEM_MORDACA ||
+                      (currentPlayer.character === CharacterClass.OCCULT &&
+                        currentPlayer.originalCharacter === CharacterClass.LOBISOMEM_MORDACA)) ? (
+                      <GagWerewolfInterface
+                        gagWerewolf={currentPlayer}
+                        players={alivePlayers}
+                        onGagAction={handleGagAction}
                       />
                     ) : (
                       <div className="space-y-6">

@@ -45,27 +45,16 @@ export function distributeCharacters(
   // Adicionar lobisomens (podem ser repetidos apenas o LOBISOMEM comum)
   for (let i = 0; i < config.numberOfWerewolves; i++) {
     if (werewolfClasses.length > 0) {
-      // Se já temos um lobisomem especial, só permitir lobisomem comum
-      const alreadyHasSpecialWerewolf = selectedClasses.some(cls => 
-        cls === CharacterClass.LOBISOMEM_VOODOO || cls === CharacterClass.LOBISOMEM_MORDACA
-      );
+      // Buscar todas as classes de lobisomem ainda não usadas (todas têm limite de 1 uso)
+      const unusedWerewolves = werewolfClasses.filter(cls => !selectedClasses.includes(cls));
       
-      if (alreadyHasSpecialWerewolf) {
-        // Só pode adicionar lobisomem comum
-        selectedClasses.push(CharacterClass.LOBISOMEM);
+      if (unusedWerewolves.length > 0) {
+        // Sortear aleatoriamente entre as classes não usadas
+        const randomIndex = Math.floor(Math.random() * unusedWerewolves.length);
+        selectedClasses.push(unusedWerewolves[randomIndex]);
       } else {
-        // Pode escolher qualquer lobisomem disponível
-        const availableWerewolves = werewolfClasses.filter(cls => 
-          !selectedClasses.includes(cls) || cls === CharacterClass.LOBISOMEM
-        );
-        
-        if (availableWerewolves.length > 0) {
-          const randomIndex = Math.floor(Math.random() * availableWerewolves.length);
-          selectedClasses.push(availableWerewolves[randomIndex]);
-        } else {
-          // Se não há mais classes de lobisomem disponíveis, usar lobisomem comum como fallback
-          selectedClasses.push(CharacterClass.LOBISOMEM);
-        }
+        // Todas as classes habilitadas já foram usadas, só resta repetir o LOBISOMEM comum
+        selectedClasses.push(CharacterClass.LOBISOMEM);
       }
     } else {
       // Se não há classes de lobisomem selecionadas, sempre usar lobisomem comum
@@ -92,22 +81,24 @@ export function distributeCharacters(
   // Preencher o restante com classes do bem disponíveis
   const remainingSlots = config.numberOfPlayers - selectedClasses.length;
   
-  // Obter classes do bem disponíveis (exceto aldeão)
+  // Obter classes do bem disponíveis (incluindo aldeão se estiver habilitado)
   const goodClassesAvailable = nonWerewolfClasses.filter(cls => 
-    cls !== CharacterClass.ALDEAO && !selectedClasses.includes(cls) && getCharacterTeam(cls) === Team.GOOD
+    getCharacterTeam(cls) === Team.GOOD
   );
   
-  // Adicionar classes do bem únicas primeiro
-  for (let i = 0; i < remainingSlots && goodClassesAvailable.length > 0; i++) {
-    const randomIndex = Math.floor(Math.random() * goodClassesAvailable.length);
-    const selectedClass = goodClassesAvailable.splice(randomIndex, 1)[0];
-    selectedClasses.push(selectedClass);
-  }
-  
-  // Se ainda há slots restantes, preencher com aldeões (sempre disponível como fallback)
-  const stillRemainingSlots = config.numberOfPlayers - selectedClasses.length;
-  for (let i = 0; i < stillRemainingSlots; i++) {
-    selectedClasses.push(CharacterClass.ALDEAO);
+  // Adicionar classes do bem
+  for (let i = 0; i < remainingSlots; i++) {
+    // Buscar todas as classes do bem ainda não usadas (todas têm limite de 1 uso)
+    const unusedGood = goodClassesAvailable.filter(cls => !selectedClasses.includes(cls));
+    
+    if (unusedGood.length > 0) {
+      // Sortear aleatoriamente entre as classes não usadas
+      const randomIndex = Math.floor(Math.random() * unusedGood.length);
+      selectedClasses.push(unusedGood[randomIndex]);
+    } else {
+      // Todas as classes habilitadas já foram usadas, só resta repetir o ALDEAO
+      selectedClasses.push(CharacterClass.ALDEAO);
+    }
   }
 
   // Embaralhar classes

@@ -368,7 +368,7 @@ export function resolveNightActions(players: Player[], actions: GameAction[]): A
             messages.push(`${voodoo.name} acertou a classe de ${target.name} e o eliminou!`)
             
             // Register death reason
-            deathReasons[target.id] = 'eliminado pelo lobisomem voodoo'
+            deathReasons[target.id] = 'enfeitiçado pelo lobisomem voodoo'
 
             // Aplicar mortes secundárias
             const loveDeath = applyLoveDeath(updatedPlayers, target.id)
@@ -387,7 +387,7 @@ export function resolveNightActions(players: Player[], actions: GameAction[]): A
           messages.push(`${voodoo.name} errou a classe de ${target.name} e morreu!`)
           
           // Register death reason
-          deathReasons[voodoo.id] = 'morreu ao errar o palpite voodoo'
+          deathReasons[voodoo.id] = 'morreu ao errar o feitiço voodoo'
 
           // Aplicar mortes secundárias
           const loveDeath = applyLoveDeath(updatedPlayers, voodoo.id)
