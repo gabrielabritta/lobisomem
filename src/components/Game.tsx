@@ -261,47 +261,46 @@ export default function Game({ gameState, onGameReset }: GameProps) {
 
   return (
     <div className="max-w-4xl mx-auto">
-      {/* Header com informações do jogo */}
-      <div className="card mb-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h2 className="text-2xl font-bold">🐺 Lobisomem</h2>
-            <p className="text-dark-300">
-              Fase: <span className="text-primary-400 font-semibold">
-                {currentGameState.currentPhase === GamePhase.CHARACTER_DISTRIBUTION && 'Distribuição de Classes'}
-                {currentGameState.currentPhase === GamePhase.SETUP && 'Ações Iniciais'}
-                {currentGameState.currentPhase === GamePhase.MAYOR_VOTING && 'Votação para Prefeito'}
-                {currentGameState.currentPhase === GamePhase.NIGHT && `Noite ${currentGameState.currentNight}`}
-                {currentGameState.currentPhase === GamePhase.DAY && `Dia ${currentGameState.currentDay}`}
-              </span>
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-sm text-dark-300">
-              Jogadores: {currentGameState.players.length}
-            </p>
-            <p className="text-sm text-dark-300">
-              Vivos: {currentGameState.players.filter(p => p.isAlive).length}
-            </p>
-            <div className="flex gap-2 mt-2">
-              {/* Botão da planilha para o mestre */}
+      {/* Header com informações do jogo - apenas para algumas fases */}
+      {(currentGameState.currentPhase === GamePhase.CHARACTER_DISTRIBUTION || 
+        currentGameState.currentPhase === GamePhase.SETUP || 
+        currentGameState.currentPhase === GamePhase.MAYOR_VOTING || 
+        currentGameState.currentPhase === GamePhase.ENDED) && (
+        <div className="card mb-6">
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-center sm:justify-center gap-3 w-full">
+              <p className="text-dark-300 text-center">
+                Fase: <span className="text-primary-400 font-semibold">
+                  {currentGameState.currentPhase === GamePhase.CHARACTER_DISTRIBUTION && 'Distribuição de Classes'}
+                  {currentGameState.currentPhase === GamePhase.SETUP && 'Ações Iniciais'}
+                  {currentGameState.currentPhase === GamePhase.MAYOR_VOTING && 'Votação para Prefeito'}
+                  {currentGameState.currentPhase === GamePhase.ENDED && 'Fim de Jogo'}
+                </span>
+              </p>
+              <span className="text-sm text-dark-400">👥 {currentGameState.players.filter(p => p.isAlive).length} vivos</span>
+            </div>
+            <div className="flex gap-3 w-full sm:w-auto justify-center">
               <button
                 onClick={() => setShowGameStatus(true)}
-                className="btn-secondary text-sm px-3 py-1"
+                className="btn-secondary text-sm px-6 py-2 flex-1 sm:flex-initial min-w-[140px]"
                 title="Abrir modal com situação geral do jogo"
               >
                 📊 Planilha
               </button>
               <button
-                onClick={onGameReset}
-                className="btn-secondary text-sm px-3 py-1"
+                onClick={() => {
+                  if (confirm('Tem certeza que deseja iniciar uma nova partida? Todos os progressos atuais serão perdidos.')) {
+                    onGameReset()
+                  }
+                }}
+                className="btn-secondary text-sm px-6 py-2 flex-1 sm:flex-initial min-w-[140px]"
               >
                 🔄 Nova Partida
               </button>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Renderizar fase atual */}
       {currentGameState.currentPhase === GamePhase.CHARACTER_DISTRIBUTION && (
@@ -333,6 +332,8 @@ export default function Game({ gameState, onGameReset }: GameProps) {
           nightNumber={currentGameState.currentNight}
           gameState={currentGameState}
           onNightComplete={handleNightComplete}
+          onShowGameStatus={() => setShowGameStatus(true)}
+          onGameReset={onGameReset}
         />
       )}
 
@@ -348,9 +349,11 @@ export default function Game({ gameState, onGameReset }: GameProps) {
           deathReasons={nightResults.deathReasons}
           needsMayorReelection={checkMayorStatus(currentGameState.players, currentGameState.mayorId).needsReelection}
           previousMayorName={checkMayorStatus(currentGameState.players, currentGameState.mayorId).previousMayorName}
-          pendingSilverBulletPlayer={currentGameState.pendingSilverBulletPlayer}
+          pendingSilverBulletPlayer={currentGameState.pendingSilverBulletPlayer as Player | undefined}
           onDayComplete={handleDayComplete}
           onSilverBulletShot={handleSilverBulletShot}
+          onShowGameStatus={() => setShowGameStatus(true)}
+          onGameReset={onGameReset}
         />
       )}
 

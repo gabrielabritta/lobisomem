@@ -142,17 +142,14 @@ export default function MayorReelection({
           </div>
         )}
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           {alivePlayers.map(player => (
             <button
               key={player.id}
               onClick={() => handleVote(player.id)}
-              className="p-4 rounded-lg border bg-dark-700 border-dark-600 hover:bg-dark-600 transition-all"
+              className="px-4 py-2 rounded-lg border bg-dark-700 border-dark-600 hover:bg-dark-600 transition-all"
             >
               <div className="font-medium">{player.name}</div>
-              <div className="text-sm text-dark-300 mt-1">
-                Eleger Prefeito
-              </div>
             </button>
           ))}
         </div>

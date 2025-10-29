@@ -117,6 +117,7 @@ export interface GameState {
   discussionEndTime?: Date;
   witchPotions?: WitchPotions; // Controle das poções da bruxa
   usedAbilities?: { [playerId: string]: string[] }; // Controle de habilidades usadas por jogador
+  pendingSilverBulletPlayer?: Player; // Bala de Prata pendente para atirar
 }
 
 // Tipos para ações específicas dos personagens

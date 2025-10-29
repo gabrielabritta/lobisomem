@@ -19,6 +19,8 @@ interface DayPhaseProps {
   pendingSilverBulletPlayer?: Player
   onDayComplete: (expelledPlayerId?: string, newMayorId?: string, updatedPlayers?: Player[]) => void
   onSilverBulletShot?: (silverBulletPlayerId: string, targetId: string, trigger: 'night_death' | 'day_expulsion') => void
+  onShowGameStatus?: () => void
+  onGameReset?: () => void
 }
 
 type DayStep = 
@@ -45,7 +47,9 @@ export default function DayPhase({
   previousMayorName = '',
   pendingSilverBulletPlayer,
   onDayComplete,
-  onSilverBulletShot
+  onSilverBulletShot,
+  onShowGameStatus,
+  onGameReset
 }: DayPhaseProps) {
   const [currentStep, setCurrentStep] = useState<DayStep>('deaths_announcement')
   const [discussionTimeLeft, setDiscussionTimeLeft] = useState(config.discussionTime * 60)
@@ -238,8 +242,47 @@ const handleMayorTieChoice = (expelledPlayerId: string) => {
     return [lover]
   }
 
+  // Determinar se deve mostrar o cabeçalho
+  const shouldShowHeader = currentStep === 'deaths_announcement' || currentStep === 'expulsion_result' || currentStep === 'complete'
+  
   return (
     <div className="max-w-4xl mx-auto">
+      {shouldShowHeader && (
+        <div className="card mb-6">
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-center sm:justify-center gap-3 w-full">
+              <p className="text-dark-300 text-center">
+                Fase: <span className="text-primary-400 font-semibold">
+                  Dia {dayNumber}
+                </span>
+              </p>
+              <span className="text-sm text-dark-400">👥 {players.filter(p => p.isAlive).length} vivos</span>
+            </div>
+            {onShowGameStatus && onGameReset && (
+              <div className="flex gap-3 w-full sm:w-auto justify-center">
+                <button
+                  onClick={onShowGameStatus}
+                  className="btn-secondary text-sm px-6 py-2 flex-1 sm:flex-initial min-w-[140px]"
+                  title="Abrir modal com situação geral do jogo"
+                >
+                  📊 Planilha
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirm('Tem certeza que deseja iniciar uma nova partida? Todos os progressos atuais serão perdidos.')) {
+                      onGameReset()
+                    }
+                  }}
+                  className="btn-secondary text-sm px-6 py-2 flex-1 sm:flex-initial min-w-[140px]"
+                >
+                  🔄 Nova Partida
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      
       <div className="card">
         <h2 className="text-2xl font-bold mb-6 text-center">
           ☀️ Dia {dayNumber}
@@ -405,17 +448,14 @@ const handleMayorTieChoice = (expelledPlayerId: string) => {
               </div>
             )}
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               {alivePlayers.map(player => (
                 <button
                   key={player.id}
                   onClick={() => handleMayorReelectionVote(player.id)}
-                  className="p-4 rounded-lg border bg-dark-700 border-dark-600 hover:bg-dark-600 transition-all"
+                  className="px-4 py-2 rounded-lg border bg-dark-700 border-dark-600 hover:bg-dark-600 transition-all"
                 >
                   <div className="font-medium">{player.name}</div>
-                  <div className="text-sm text-dark-300 mt-1">
-                    Eleger Prefeito
-                  </div>
                 </button>
               ))}
             </div>
@@ -498,30 +538,26 @@ const handleMayorTieChoice = (expelledPlayerId: string) => {
               </div>
             )}
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {alivePlayers.map(player => (
-                <button
-                  key={player.id}
-                  onClick={() => handleVote(player.id)}
-                  className="p-4 rounded-lg border bg-dark-700 border-dark-600 hover:bg-dark-600 transition-all"
-                >
-                  <div className="font-medium">{player.name}</div>
-                  <div className="text-sm text-dark-300 mt-1">
-                    Expulsar
-                  </div>
-                </button>
-              ))}
+            <div className="space-y-3">
+              <div className="grid grid-cols-3 gap-3">
+                {alivePlayers.map(player => (
+                  <button
+                    key={player.id}
+                    onClick={() => handleVote(player.id)}
+                    className="px-4 py-2 rounded-lg border bg-dark-700 border-dark-600 hover:bg-dark-600 transition-all"
+                  >
+                    <div className="font-medium">{player.name}</div>
+                  </button>
+                ))}
+              </div>
 
               {/* Opção de não expulsar (se permitido) */}
               {config.allowNoExpulsionVote && (
                 <button
                   onClick={() => handleVote('no_expulsion')}
-                  className="p-4 rounded-lg border bg-green-700 border-green-600 hover:bg-green-600 transition-all"
+                  className="w-full px-4 py-2 rounded-lg border bg-green-700 border-green-600 hover:bg-green-600 transition-all"
                 >
                   <div className="font-medium">Não Expulsar</div>
-                  <div className="text-sm text-green-300 mt-1">
-                    Ninguém será expulso
-                  </div>
                 </button>
               )}
             </div>
@@ -537,17 +573,16 @@ const handleMayorTieChoice = (expelledPlayerId: string) => {
         <p className="text-dark-300">Prefeito, escolha quem será expulso:</p>
         <div className="bg-dark-700 rounded-lg p-4">
             <h4 className="font-semibold mb-3">Jogadores Empatados:</h4>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-3">
                 {votingResult?.tiedPlayers.map(playerId => {
                     const player = players.find(p => p.id === playerId);
                     return player ? (
                         <button
                             key={player.id}
                             onClick={() => handleMayorTieChoice(player.id)}
-                            className="p-4 rounded-lg border bg-red-900/50 border-red-700 hover:bg-red-800/50 transition-all"
+                            className="px-4 py-2 rounded-lg border bg-red-900/50 border-red-700 hover:bg-red-800/50 transition-all"
                         >
                             <div className="font-medium">{player.name}</div>
-                            <div className="text-sm text-red-300 mt-1">Expulsar</div>
                         </button>
                     ) : null;
                 })}

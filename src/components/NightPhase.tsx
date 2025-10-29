@@ -947,9 +947,11 @@ interface NightPhaseProps {
   nightNumber: number
   gameState?: GameState
   onNightComplete: (actions: GameAction[], updatedPlayers: Player[], updatedGameState?: Partial<GameState>) => void
+  onShowGameStatus?: () => void
+  onGameReset?: () => void
 }
 
-export default function NightPhase({ players, nightNumber, gameState, onNightComplete }: NightPhaseProps) {
+export default function NightPhase({ players, nightNumber, gameState, onNightComplete, onShowGameStatus, onGameReset }: NightPhaseProps) {
   const [currentStep, setCurrentStep] = useState<NightStep>('werewolves')
   const [actions, setActions] = useState<GameAction[]>([])
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0)
@@ -1307,8 +1309,47 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
     }
   }
 
+  // Determinar se deve mostrar o cabeçalho
+  const shouldShowHeader = currentStep === 'werewolves' || currentStep === 'witch' || currentStep === 'complete'
+  
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="max-w-4xl mx-auto">
+      {shouldShowHeader && (
+        <div className="card mb-6">
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-center sm:justify-center gap-3 w-full">
+              <p className="text-dark-300 text-center">
+                Fase: <span className="text-primary-400 font-semibold">
+                  Noite {nightNumber}
+                </span>
+              </p>
+              <span className="text-sm text-dark-400">👥 {players.filter(p => p.isAlive).length} vivos</span>
+            </div>
+            {onShowGameStatus && onGameReset && (
+              <div className="flex gap-3 w-full sm:w-auto justify-center">
+                <button
+                  onClick={onShowGameStatus}
+                  className="btn-secondary text-sm px-6 py-2 flex-1 sm:flex-initial min-w-[140px]"
+                  title="Abrir modal com situação geral do jogo"
+                >
+                  📊 Planilha
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirm('Tem certeza que deseja iniciar uma nova partida? Todos os progressos atuais serão perdidos.')) {
+                      onGameReset()
+                    }
+                  }}
+                  className="btn-secondary text-sm px-6 py-2 flex-1 sm:flex-initial min-w-[140px]"
+                >
+                  🔄 Nova Partida
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      
       <div className="card">
         <h2 className="text-2xl font-bold mb-6 text-center">
           🌙 Noite {nightNumber}
