@@ -264,7 +264,6 @@ export default function Game({ gameState, onGameReset }: GameProps) {
       {/* Header com informações do jogo - apenas para algumas fases */}
       {(currentGameState.currentPhase === GamePhase.CHARACTER_DISTRIBUTION || 
         currentGameState.currentPhase === GamePhase.SETUP || 
-        currentGameState.currentPhase === GamePhase.MAYOR_VOTING || 
         currentGameState.currentPhase === GamePhase.ENDED) && (
         <div className="card mb-6">
           <div className="flex flex-col items-center gap-4">
@@ -273,7 +272,6 @@ export default function Game({ gameState, onGameReset }: GameProps) {
                 Fase: <span className="text-primary-400 font-semibold">
                   {currentGameState.currentPhase === GamePhase.CHARACTER_DISTRIBUTION && 'Distribuição de Classes'}
                   {currentGameState.currentPhase === GamePhase.SETUP && 'Ações Iniciais'}
-                  {currentGameState.currentPhase === GamePhase.MAYOR_VOTING && 'Votação para Prefeito'}
                   {currentGameState.currentPhase === GamePhase.ENDED && 'Fim de Jogo'}
                 </span>
               </p>

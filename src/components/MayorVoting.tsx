@@ -117,9 +117,9 @@ export default function MayorVoting({ players, config, onVotingComplete }: Mayor
 
         {/* Mostrar votos até agora (se não for anônimo) */}
         {showVotes && Object.keys(votes).length > 0 && (
-          <div className="bg-dark-700 rounded-lg p-4">
-            <h4 className="font-semibold mb-2">📊 Votos até agora:</h4>
-            <div className="grid md:grid-cols-2 gap-2 text-sm">
+          <div className="bg-dark-700 rounded-lg p-2">
+            <h4 className="font-semibold text-xs mb-1">📊 Votos até agora:</h4>
+            <div className="grid md:grid-cols-2 gap-1 text-xs">
               {Object.entries(votes).map(([voterId, targetId]) => {
                 const voter = players.find(p => p.id === voterId)
                 const target = players.find(p => p.id === targetId)

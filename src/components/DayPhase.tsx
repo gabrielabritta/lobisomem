@@ -432,9 +432,9 @@ const handleMayorTieChoice = (expelledPlayerId: string) => {
 
             {/* Mostrar votos até agora (se não for anônimo) */}
             {!config.mayorVotingAnonymous && Object.keys(mayorReelectionVotes).length > 0 && (
-              <div className="bg-dark-700 rounded-lg p-4">
-                <h4 className="font-semibold mb-2">📊 Votos até agora:</h4>
-                <div className="grid md:grid-cols-2 gap-2 text-sm">
+              <div className="bg-dark-700 rounded-lg p-2">
+                <h4 className="font-semibold text-xs mb-1">📊 Votos até agora:</h4>
+                <div className="grid md:grid-cols-2 gap-1 text-xs">
                   {Object.entries(mayorReelectionVotes).map(([voterId, targetId]) => {
                     const voter = players.find(p => p.id === voterId)
                     const target = players.find(p => p.id === targetId)
@@ -479,20 +479,20 @@ const handleMayorTieChoice = (expelledPlayerId: string) => {
             </div>
 
             {/* Mostrar detalhes da votação */}
-            <div className="bg-dark-700 rounded-lg p-4">
-              <h4 className="font-semibold mb-3">📊 Detalhes da Votação:</h4>
-              <div className="grid md:grid-cols-2 gap-2 text-sm">
-                {Object.entries(mayorReelectionVotes).map(([voterId, targetId]) => {
-                  const voter = players.find(p => p.id === voterId)
-                  const target = players.find(p => p.id === targetId)
-                  return (
-                    <div key={voterId} className="text-dark-300">
-                      {voter?.name} → {target?.name}
-                    </div>
-                  )
-                })}
-              </div>
+          <div className="bg-dark-700 rounded-lg p-2">
+            <h4 className="font-semibold text-xs mb-1">📊 Detalhes da Votação:</h4>
+            <div className="grid md:grid-cols-2 gap-1 text-xs">
+              {Object.entries(mayorReelectionVotes).map(([voterId, targetId]) => {
+                const voter = players.find(p => p.id === voterId)
+                const target = players.find(p => p.id === targetId)
+                return (
+                  <div key={voterId} className="text-dark-300">
+                    {voter?.name} → {target?.name}
+                  </div>
+                )
+              })}
             </div>
+          </div>
 
             <button
               onClick={handleMayorReelectionComplete}
@@ -522,9 +522,9 @@ const handleMayorTieChoice = (expelledPlayerId: string) => {
 
             {/* Mostrar votos até agora (se não for anônimo) */}
             {showVotes && Object.keys(votes).length > 0 && (
-              <div className="bg-dark-700 rounded-lg p-4">
-                <h4 className="font-semibold mb-2">📊 Votos até agora:</h4>
-                <div className="grid md:grid-cols-2 gap-2 text-sm">
+              <div className="bg-dark-700 rounded-lg p-2">
+                <h4 className="font-semibold text-xs mb-1">📊 Votos até agora:</h4>
+                <div className="grid md:grid-cols-2 gap-1 text-xs">
                   {Object.entries(votes).map(([voterId, targetId]) => {
                     const voter = players.find(p => p.id === voterId)
                     const target = targetId === 'no_expulsion' ? 'Não expulsar' : players.find(p => p.id === targetId)?.name
@@ -633,9 +633,9 @@ const handleMayorTieChoice = (expelledPlayerId: string) => {
             })()}
 
             {/* Mostrar detalhes da votação */}
-            <div className="bg-dark-700 rounded-lg p-4">
-              <h4 className="font-semibold mb-3">📊 Detalhes da Votação:</h4>
-              <div className="grid md:grid-cols-2 gap-2 text-sm">
+            <div className="bg-dark-700 rounded-lg p-2">
+              <h4 className="font-semibold text-xs mb-1">📊 Detalhes da Votação:</h4>
+              <div className="grid md:grid-cols-2 gap-1 text-xs">
                 {Object.entries(votes).map(([voterId, targetId]) => {
                   const voter = players.find(p => p.id === voterId)
                   const target = targetId === 'no_expulsion' ? 'Não expulsar' : players.find(p => p.id === targetId)?.name
