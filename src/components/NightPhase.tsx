@@ -36,6 +36,38 @@ function FakeWitchScreen({ onComplete }: FakeWitchScreenProps) {
   )
 }
 
+interface SimpleOnCompleteProps { onComplete: () => void }
+
+function FakeWerewolvesScreen({ onComplete }: SimpleOnCompleteProps) {
+  return (
+    <div className="space-y-6">
+      <div className="text-center">
+        <h3 className="text-2xl font-bold mb-4">Lobisomens</h3>
+      </div>
+      <div className="bg-red-900/30 border-2 border-red-700 rounded-lg p-6">
+        <p className="text-red-100 text-xl font-semibold text-center mb-2">⚠️ Nenhum lobisomem vivo</p>
+        <p className="text-dark-200 text-center text-lg">Siga o fluxo normalmente para não revelar esta informação.</p>
+      </div>
+      <button onClick={onComplete} className="btn-primary w-full text-lg">Continuar</button>
+    </div>
+  )
+}
+
+function FakeGagWerewolfScreen({ onComplete }: SimpleOnCompleteProps) {
+  return (
+    <div className="space-y-6">
+      <div className="text-center">
+        <h3 className="text-2xl font-bold mb-4">Lobisomem Mordaça</h3>
+      </div>
+      <div className="bg-yellow-900/30 border-2 border-yellow-700 rounded-lg p-6">
+        <p className="text-yellow-100 text-xl font-semibold text-center mb-2">⚠️ Nenhum mordaça vivo</p>
+        <p className="text-dark-200 text-center text-lg">Siga o fluxo normalmente para não revelar esta informação.</p>
+      </div>
+      <button onClick={onComplete} className="btn-primary w-full text-lg">Continuar</button>
+    </div>
+  )
+}
+
 interface WitchInterfaceProps {
   witch: Player
   actions: GameAction[]
@@ -1311,7 +1343,8 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
           🌙 Noite {nightNumber}
         </h2>
 
-        {currentStep === 'werewolves' && werewolves.length > 0 && (
+        {currentStep === 'werewolves' && (
+          werewolves.length > 0 ? (
           <div className="space-y-6">
             <div className="text-center">
               <h3 className="text-xl font-semibold mb-2">🐺 Lobisomens</h3>
@@ -1351,15 +1384,66 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
               </button>
             </div>
           </div>
+          ) : (
+            gameState?.config.allowedClasses.some(cls => (
+              cls === CharacterClass.LOBISOMEM ||
+              cls === CharacterClass.LOBISOMEM_VOODOO ||
+              cls === CharacterClass.LOBISOMEM_MORDACA
+            )) ? (
+              <FakeWerewolvesScreen
+                onComplete={() => {
+                  // Avançar similar ao handleWerewolfAction, priorizando mordaça quando habilitado
+                  if (gameState?.config.allowedClasses.includes(CharacterClass.LOBISOMEM_MORDACA)) {
+                    setCurrentStep('gag_werewolf')
+                  } else if (occult) {
+                    setCurrentStep('occult')
+                  } else if (playersInPlayerActionsStep.length > 0) {
+                    setCurrentStep('player_actions')
+                  } else if (witchWasEnabled) {
+                    setCurrentStep('witch')
+                  } else {
+                    if (gameState?.config.debugMode) {
+                      setCurrentStep('complete')
+                    } else {
+                      setCurrentStep('master_pass')
+                    }
+                  }
+                }}
+              />
+            ) : null
+          )
         )}
 
-        {currentStep === 'gag_werewolf' && gagWerewolf && (
-          <GagWerewolfInterface
-            gagWerewolf={gagWerewolf}
-            players={alivePlayers}
-            usedAbilities={usedAbilities}
-            onGagAction={handleGagAction}
-          />
+        {currentStep === 'gag_werewolf' && (
+          gagWerewolf ? (
+            <GagWerewolfInterface
+              gagWerewolf={gagWerewolf}
+              players={alivePlayers}
+              usedAbilities={usedAbilities}
+              onGagAction={handleGagAction}
+            />
+          ) : (
+            gameState?.config.allowedClasses.includes(CharacterClass.LOBISOMEM_MORDACA) ? (
+              <FakeGagWerewolfScreen
+                onComplete={() => {
+                  // Mesmo fluxo do handleGagAction quando não há ação
+                  if (occult) {
+                    setCurrentStep('occult')
+                  } else if (playersInPlayerActionsStep.length > 0) {
+                    setCurrentStep('player_actions')
+                  } else if (witchWasEnabled) {
+                    setCurrentStep('witch')
+                  } else {
+                    if (gameState?.config.debugMode) {
+                      setCurrentStep('complete')
+                    } else {
+                      setCurrentStep('master_pass')
+                    }
+                  }
+                }}
+              />
+            ) : null
+          )
         )}
 
         {currentStep === 'pass_device' && (
