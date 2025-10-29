@@ -495,7 +495,6 @@ interface VidenteInterfaceProps {
 
 function VidenteInterface({ vidente, alivePlayers, silencedThisNight, onVidenteAction }: VidenteInterfaceProps) {
   const [selectedTarget, setSelectedTarget] = useState<string>('')
-  const [showTargetSelection, setShowTargetSelection] = useState(false)
   const [investigationResult, setInvestigationResult] = useState<string | null>(null)
 
   // Jogadores disponíveis para investigação (exceto o próprio vidente)
@@ -514,10 +513,7 @@ function VidenteInterface({ vidente, alivePlayers, silencedThisNight, onVidenteA
 
         const resultText = `${target.name} é ${isGood ? 'BOM' : 'MAU'}`
         setInvestigationResult(resultText)
-        setShowTargetSelection(false)
       }
-    } else {
-      alert('Selecione um jogador para investigar!')
     }
   }
 
@@ -562,58 +558,28 @@ function VidenteInterface({ vidente, alivePlayers, silencedThisNight, onVidenteA
     )
   }
 
-  if (!showTargetSelection) {
-    return (
-      <div className="space-y-6">
-        <div className="text-center">
-          <h3 className="text-xl font-semibold mb-2">
-            👁️ {vidente.name} - Vidente
-          </h3>
-          
-          {(vidente.isSilenced || vidente.id === silencedThisNight) && (
-            <div className="bg-yellow-900/30 border border-yellow-700 text-yellow-100 p-4 rounded-lg text-center mb-4">
-              🤐 Você foi silenciado e não pode falar no próximo dia!
-            </div>
-          )}
-          
-          <p className="text-dark-300 mb-4">
-            Você pode usar sua habilidade para ver a índole de um jogador.
-          </p>
-          <div className="bg-purple-900/30 border border-purple-700 rounded-lg p-4 mb-4">
-            <p className="text-purple-300 font-semibold">ℹ️ Informação:</p>
-            <p className="text-purple-200 text-sm">
-              Você descobrirá se a pessoa é do bem (BOM) ou do mal (MAU).
-            </p>
-          </div>
-        </div>
-
-        <div className="flex justify-center space-x-4">
-          <button
-            onClick={() => onVidenteAction(false)}
-            className="btn-secondary"
-          >
-            ❌ Não Usar Habilidade
-          </button>
-          <button
-            onClick={() => setShowTargetSelection(true)}
-            className="btn-primary bg-purple-600 hover:bg-purple-700"
-          >
-            👁️ Usar Habilidade do Vidente
-          </button>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-6">
       <div className="text-center">
         <h3 className="text-xl font-semibold mb-2">
           👁️ {vidente.name} - Vidente
         </h3>
+        
+        {(vidente.isSilenced || vidente.id === silencedThisNight) && (
+          <div className="bg-yellow-900/30 border border-yellow-700 text-yellow-100 p-4 rounded-lg text-center mb-4">
+            🤐 Você foi silenciado e não pode falar no próximo dia!
+          </div>
+        )}
+        
         <p className="text-dark-300 mb-4">
-          Escolha quem você quer investigar:
+          Você pode usar sua habilidade para ver a índole de um jogador.
         </p>
+        <div className="bg-purple-900/30 border border-purple-700 rounded-lg p-3 mb-4">
+          <p className="text-purple-300 font-semibold">ℹ️ Informação:</p>
+          <p className="text-purple-200 text-sm">
+            Você descobrirá se a pessoa é do bem (BOM) ou do mal (MAU).
+          </p>
+        </div>
       </div>
 
       {/* Seleção de alvo */}
@@ -636,14 +602,8 @@ function VidenteInterface({ vidente, alivePlayers, silencedThisNight, onVidenteA
         </div>
       </div>
 
-      {/* Botões de ação */}
-      <div className="flex justify-center space-x-4">
-        <button
-          onClick={() => setShowTargetSelection(false)}
-          className="btn-secondary"
-        >
-          ← Voltar
-        </button>
+      {/* Botão de ação */}
+      <div className="text-center">
         <button
           onClick={handleUseAbility}
           disabled={!selectedTarget}
