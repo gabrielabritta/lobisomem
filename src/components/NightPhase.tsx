@@ -449,19 +449,18 @@ function MediumInterface({ medium, allPlayers, usedAbilities, silencedThisNight,
       {/* Seleção de alvo */}
       <div className="space-y-4">
         <h4 className="font-semibold text-center">🎯 Escolha quem investigar:</h4>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           {deadPlayers.map(player => (
             <button
               key={player.id}
               onClick={() => setSelectedTarget(player.id)}
-              className={`p-4 rounded-lg border transition-all ${
+              className={`px-4 py-2 rounded-lg border transition-all ${
                 selectedTarget === player.id
                   ? 'bg-blue-600 border-blue-500'
                   : 'bg-dark-700 border-dark-600 hover:bg-dark-600'
               }`}
             >
               <div className="font-medium">{player.name}</div>
-              <div className="text-sm text-dark-300 mt-1">💀 Investigar</div>
             </button>
           ))}
         </div>
@@ -620,19 +619,18 @@ function VidenteInterface({ vidente, alivePlayers, silencedThisNight, onVidenteA
       {/* Seleção de alvo */}
       <div className="space-y-4">
         <h4 className="font-semibold text-center">🎯 Escolha quem investigar:</h4>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           {availableTargets.map(player => (
             <button
               key={player.id}
               onClick={() => setSelectedTarget(player.id)}
-              className={`p-4 rounded-lg border transition-all ${
+              className={`px-4 py-2 rounded-lg border transition-all ${
                 selectedTarget === player.id
                   ? 'bg-purple-600 border-purple-500'
                   : 'bg-dark-700 border-dark-600 hover:bg-dark-600'
               }`}
             >
               <div className="font-medium">{player.name}</div>
-              <div className="text-sm text-dark-300 mt-1">👁️ Investigar</div>
             </button>
           ))}
         </div>
@@ -747,19 +745,18 @@ function GagWerewolfInterface({ gagWerewolf, players, usedAbilities, onGagAction
       {/* Seleção de alvo */}
       <div className="space-y-4">
         <h4 className="font-semibold text-center">🎯 Escolha quem amordaçar:</h4>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           {availableTargets.map(player => (
             <button
               key={player.id}
               onClick={() => setSelectedTarget(player.id)}
-              className={`p-4 rounded-lg border transition-all ${
+              className={`px-4 py-2 rounded-lg border transition-all ${
                 selectedTarget === player.id
                   ? 'bg-purple-600 border-purple-500'
                   : 'bg-dark-700 border-dark-600 hover:bg-dark-600'
               }`}
             >
               <div className="font-medium">{player.name}</div>
-              <div className="text-sm text-dark-300 mt-1">🤐 Amordaçar</div>
             </button>
           ))}
         </div>
@@ -867,19 +864,18 @@ function VoodooWerewolfInterface({ voodooWerewolf, players, silencedThisNight, o
       {/* Seleção de alvo */}
       <div className="space-y-4">
         <h4 className="font-semibold text-center">🎯 Escolha seu alvo:</h4>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           {availableTargets.map(player => (
             <button
               key={player.id}
               onClick={() => setSelectedTarget(player.id)}
-              className={`p-4 rounded-lg border transition-all ${
+              className={`px-4 py-2 rounded-lg border transition-all ${
                 selectedTarget === player.id
                   ? 'bg-purple-600 border-purple-500'
                   : 'bg-dark-700 border-dark-600 hover:bg-dark-600'
               }`}
             >
               <div className="font-medium">{player.name}</div>
-              <div className="text-sm text-dark-300 mt-1">Selecionar</div>
             </button>
           ))}
         </div>
@@ -1367,21 +1363,20 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
               </div>
             </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               {alivePlayers
                 .filter(p => !isWerewolf(p.character))
                 .map(player => (
                   <button
                     key={player.id}
                     onClick={() => setSelectedTarget(player.id)}
-                    className={`p-4 rounded-lg border transition-all ${
+                    className={`px-4 py-2 rounded-lg border transition-all ${
                       selectedTarget === player.id
                         ? 'bg-red-600 border-red-500'
                         : 'bg-dark-700 border-dark-600 hover:bg-dark-600'
                     }`}
                   >
                     <div className="font-medium">{player.name}</div>
-                    <div className="text-sm text-dark-300 mt-1">Devorar</div>
                   </button>
                 ))}
             </div>
@@ -1479,7 +1474,7 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
                           </div>
                         )}
 
-                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        <div className="grid grid-cols-3 gap-3">
                           {alivePlayers
                             .filter(p => {
                               // Filtro básico: não pode ser o próprio jogador
@@ -1495,25 +1490,13 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
                               <button
                                 key={player.id}
                                 onClick={() => setSelectedTarget(player.id)}
-                                className={`p-4 rounded-lg border transition-all ${
+                                className={`px-4 py-2 rounded-lg border transition-all ${
                                   selectedTarget === player.id
                                     ? 'bg-primary-600 border-primary-500'
                                     : 'bg-dark-700 border-dark-600 hover:bg-dark-600'
                                 }`}
                               >
                                 <div className="font-medium">{player.name}</div>
-                                <div className="text-sm text-dark-300 mt-1">
-                                  {player.isAlive 
-                                    ? (() => {
-                                        const character = currentPlayer.originalCharacter || currentPlayer.character
-                                        if (character === CharacterClass.ZUMBI && player.isInfected) {
-                                          return '🦠 Já Infectado'
-                                        }
-                                        return 'Selecionar'
-                                      })()
-                                    : '💀 Morto'
-                                  }
-                                </div>
                               </button>
                             ))}
                         </div>

@@ -104,23 +104,20 @@ export default function InitialActions({ players, onActionsComplete }: InitialAc
               </p>
             </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               {players
                 .filter(p => p.id !== occultPlayer.id)
                 .map(player => (
                   <button
                     key={player.id}
                     onClick={() => setSelectedTarget(player.id)}
-                    className={`p-4 rounded-lg border transition-all ${
+                    className={`px-4 py-2 rounded-lg border transition-all ${
                       selectedTarget === player.id
                         ? 'bg-primary-600 border-primary-500'
                         : 'bg-dark-700 border-dark-600 hover:bg-dark-600'
                     }`}
                   >
                     <div className="font-medium">{player.name}</div>
-                    <div className="text-sm text-dark-300 mt-1">
-                      Copiar classe
-                    </div>
                   </button>
                 ))}
             </div>
@@ -152,7 +149,7 @@ export default function InitialActions({ players, onActionsComplete }: InitialAc
               </p>
             </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               {players
                 .filter(p => p.id !== cupidPlayer?.id) // Cupido não pode se apaixonar
                 .map(player => (
@@ -160,16 +157,13 @@ export default function InitialActions({ players, onActionsComplete }: InitialAc
                     key={player.id}
                     onClick={() => toggleLoverSelection(player.id)}
                     disabled={!selectedLovers.includes(player.id) && selectedLovers.length >= 2}
-                    className={`p-4 rounded-lg border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                    className={`px-4 py-2 rounded-lg border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                       selectedLovers.includes(player.id)
                         ? 'bg-pink-600 border-pink-500'
                         : 'bg-dark-700 border-dark-600 hover:bg-dark-600'
                     }`}
                   >
                     <div className="font-medium">{player.name}</div>
-                    <div className="text-sm text-dark-300 mt-1">
-                      {selectedLovers.includes(player.id) ? '💕 Apaixonado' : 'Selecionar'}
-                    </div>
                   </button>
                 ))}
             </div>

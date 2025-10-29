@@ -87,21 +87,18 @@ export default function SilverBulletPhase({
               </h3>
             </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               {availableTargets.map(player => (
                 <button
                   key={player.id}
                   onClick={() => setSelectedTarget(player.id)}
-                  className={`p-4 rounded-lg border transition-all ${
+                  className={`px-4 py-2 rounded-lg border transition-all ${
                     selectedTarget === player.id
                       ? 'bg-red-600 border-red-500'
                       : 'bg-dark-700 border-dark-600 hover:bg-dark-600'
                   }`}
                 >
                   <div className="font-medium">{player.name}</div>
-                  <div className="text-sm text-dark-300 mt-1">
-                    Alvejar
-                  </div>
                 </button>
               ))}
             </div>
