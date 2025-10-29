@@ -172,7 +172,7 @@ function WitchInterface({ witch, actions, players, witchPotions, onWitchAction, 
             }}
             className="btn-secondary flex-1"
           >
-            Não Usar Poção de Cura
+            Não Usar
           </button>
           <button
             onClick={() => {
@@ -247,9 +247,9 @@ function WitchInterface({ witch, actions, players, witchPotions, onWitchAction, 
 
         {/* Nome selecionado em destaque */}
         {selectedPlayer && (
-          <div className="bg-red-900/30 border-2 border-red-700 rounded-lg p-8">
+          <div className="bg-red-900/30 border-2 border-red-700 rounded-lg p-4">
             <div className="text-center">
-              <p className="text-red-300 text-lg mb-4">Vítima Selecionada:</p>
+              <p className="text-red-300 text-lg mb-1">Vítima Selecionada:</p>
               <p className="text-red-100 text-5xl font-bold">
                 {selectedPlayer.name}
               </p>
@@ -266,7 +266,7 @@ function WitchInterface({ witch, actions, players, witchPotions, onWitchAction, 
             }}
             className="btn-secondary flex-1"
           >
-            Não Usar Poção de Veneno
+            Não Usar
           </button>
           <button
             onClick={() => {
@@ -277,7 +277,7 @@ function WitchInterface({ witch, actions, players, witchPotions, onWitchAction, 
             disabled={!selectedTarget}
             className="btn-primary bg-red-600 hover:bg-red-700 flex-1 disabled:opacity-50"
           >
-            Confirmar Envenenamento
+            Envenenar
           </button>
         </div>
       </div>
@@ -1311,8 +1311,8 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
   return (
     <div className="max-w-4xl mx-auto">
       {shouldShowHeader && (
-        <div className="card mb-6">
-          <div className="flex flex-col items-center gap-4">
+        <div className="card mb-3">
+          <div className="flex flex-col items-center gap-2">
             <div className="flex justify-between items-center w-full">
               <p className="text-dark-300">
                 Fase: <span className="text-primary-400 font-semibold">

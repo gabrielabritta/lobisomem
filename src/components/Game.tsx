@@ -265,8 +265,8 @@ export default function Game({ gameState, onGameReset }: GameProps) {
       {(currentGameState.currentPhase === GamePhase.CHARACTER_DISTRIBUTION || 
         currentGameState.currentPhase === GamePhase.SETUP || 
         currentGameState.currentPhase === GamePhase.ENDED) && (
-        <div className="card mb-6">
-          <div className="flex flex-col items-center gap-4">
+        <div className="card mb-3">
+          <div className="flex flex-col items-center gap-2">
             <div className="flex justify-between items-center w-full">
               <p className="text-dark-300">
                 Fase: <span className="text-primary-400 font-semibold">

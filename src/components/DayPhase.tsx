@@ -72,6 +72,10 @@ export default function DayPhase({
     return Object.values(votes).filter(targetId => targetId === playerId).length
   }
 
+  const getNoExpulsionVoteCount = () => {
+    return Object.values(votes).filter(targetId => targetId === 'no_expulsion').length
+  }
+
   const renderVoteIndicators = (count: number) => {
     if (count === 0) return null
     
@@ -332,8 +336,8 @@ const handleMayorTieChoice = (expelledPlayerId: string) => {
   return (
     <div className="max-w-4xl mx-auto">
       {shouldShowHeader && (
-        <div className="card mb-6">
-          <div className="flex flex-col items-center gap-4">
+        <div className="card mb-3">
+          <div className="flex flex-col items-center gap-2">
             <div className="flex justify-between items-center w-full">
               <p className="text-dark-300">
                 Fase: <span className="text-primary-400 font-semibold">
@@ -654,6 +658,7 @@ const handleMayorTieChoice = (expelledPlayerId: string) => {
                   className="w-full px-4 py-2 rounded-lg border bg-green-700 border-green-600 hover:bg-green-600 transition-all"
                 >
                   <div className="font-medium">Não Expulsar</div>
+                  {renderVoteIndicators(getNoExpulsionVoteCount())}
                 </button>
               )}
             </div>
