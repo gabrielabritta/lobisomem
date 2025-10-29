@@ -475,7 +475,7 @@ export function createDefaultConfig(): GameConfig {
       CharacterClass.LOBISOMEM,
       CharacterClass.VAMPIRO
     ],
-    discussionTime: 5,
+    discussionTime: 2,
     mayorVotingAnonymous: false,
     expulsionVotingAnonymous: false,
     allowNoExpulsionVote: true,

@@ -6,8 +6,7 @@ import type {
 import {
   GamePhase,
   CharacterClass,
-  CHARACTER_NAMES,
-  CHARACTER_DESCRIPTIONS
+  CHARACTER_NAMES
 } from '../types/game'
 import { 
   createDefaultConfig, 
@@ -229,7 +228,27 @@ export default function GameSetup({ onGameStart }: GameSetupProps) {
 
   const fallbackWarnings = checkFallbackNeeded()
 
-  const allCharacterClasses = Object.values(CharacterClass)
+  // Custom order: Werewolves first, then occult, then alternative evil classes
+  const allCharacterClasses = [
+    CharacterClass.ALDEAO,
+    CharacterClass.MEDIUM,
+    CharacterClass.VIDENTE,
+    CharacterClass.CUPIDO,
+    CharacterClass.TALISMA,
+    CharacterClass.BRUXA,
+    CharacterClass.BALA_DE_PRATA,
+    CharacterClass.GUARDIAO,
+    CharacterClass.HEMOMANTE,
+    CharacterClass.HEROI,
+    CharacterClass.LOBISOMEM,
+    CharacterClass.LOBISOMEM_VOODOO,
+    CharacterClass.LOBISOMEM_MORDACA,
+    CharacterClass.OCCULT,
+    CharacterClass.VAMPIRO,
+    CharacterClass.TRAIDOR,
+    CharacterClass.ZUMBI,
+    CharacterClass.BOBO
+  ]
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -237,9 +256,9 @@ export default function GameSetup({ onGameStart }: GameSetupProps) {
         <h2 className="text-2xl font-bold mb-6 text-center">Configuração da Partida</h2>
 
         {/* Configurações Básicas */}
-        <div className="grid md:grid-cols-2 gap-6 mb-6">
+        <div className="grid md:grid-cols-2 gap-3 md:gap-6 mb-6">
           <div>
-            <label className="block text-sm font-medium mb-2">
+            <label className="block text-sm font-medium mb-1">
               Número de Jogadores: {config.numberOfPlayers}
             </label>
             <input
@@ -250,14 +269,14 @@ export default function GameSetup({ onGameStart }: GameSetupProps) {
               onChange={(e) => handlePlayerCountChange(Number(e.target.value))}
               className="w-full h-2 bg-dark-700 rounded-lg appearance-none cursor-pointer slider"
             />
-            <div className="flex justify-between text-xs text-dark-400 mt-1">
+            <div className="flex justify-between text-xs text-dark-400 mt-0.5">
               <span>4</span>
               <span>20</span>
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">
+            <label className="block text-sm font-medium mb-1">
               Número de Lobisomens: {config.numberOfWerewolves}
             </label>
             <input
@@ -268,14 +287,14 @@ export default function GameSetup({ onGameStart }: GameSetupProps) {
               onChange={(e) => setConfig(prev => ({ ...prev, numberOfWerewolves: Number(e.target.value) }))}
               className="w-full h-2 bg-dark-700 rounded-lg appearance-none cursor-pointer slider"
             />
-            <div className="flex justify-between text-xs text-dark-400 mt-1">
+            <div className="flex justify-between text-xs text-dark-400 mt-0.5">
               <span>1</span>
               <span>{Math.floor(config.numberOfPlayers / 2)}</span>
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">
+            <label className="block text-sm font-medium mb-1">
               Classes Más Alternativas: {config.numberOfAlternativeEvil}
             </label>
             <input
@@ -286,27 +305,28 @@ export default function GameSetup({ onGameStart }: GameSetupProps) {
               onChange={(e) => setConfig(prev => ({ ...prev, numberOfAlternativeEvil: Number(e.target.value) }))}
               className="w-full h-2 bg-dark-700 rounded-lg appearance-none cursor-pointer slider"
             />
-            <div className="flex justify-between text-xs text-dark-400 mt-1">
+            <div className="flex justify-between text-xs text-dark-400 mt-0.5">
               <span>0</span>
               <span>3</span>
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">
-              Tempo de Discussão: {config.discussionTime} min
+            <label className="block text-sm font-medium mb-1">
+              Tempo de Discussão: {config.discussionTime % 1 === 0 ? `${config.discussionTime} min` : `${Math.floor(config.discussionTime)}min ${(config.discussionTime % 1) * 60}s`}
             </label>
             <input
               type="range"
-              min="1"
-              max="15"
-              value={config.discussionTime}
-              onChange={(e) => setConfig(prev => ({ ...prev, discussionTime: Number(e.target.value) }))}
+              min="2"
+              max="8"
+              step="1"
+              value={config.discussionTime * 2}
+              onChange={(e) => setConfig(prev => ({ ...prev, discussionTime: Number(e.target.value) / 2 }))}
               className="w-full h-2 bg-dark-700 rounded-lg appearance-none cursor-pointer slider"
             />
-            <div className="flex justify-between text-xs text-dark-400 mt-1">
+            <div className="flex justify-between text-xs text-dark-400 mt-0.5">
               <span>1 min</span>
-              <span>15 min</span>
+              <span>4 min</span>
             </div>
           </div>
         </div>
@@ -314,7 +334,7 @@ export default function GameSetup({ onGameStart }: GameSetupProps) {
         {/* Nomes dos Jogadores */}
         <div className="mb-6">
           <h3 className="text-lg font-semibold mb-3">Nomes dos Jogadores</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             {playerNames.map((name, index) => (
               <input
                 key={index}
@@ -333,40 +353,44 @@ export default function GameSetup({ onGameStart }: GameSetupProps) {
         {/* Classes Disponíveis */}
         <div className="mb-6">
           <h3 className="text-lg font-semibold mb-3">Classes Disponíveis</h3>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {allCharacterClasses.map((characterClass) => (
-              <div
-                key={characterClass}
-                className={`p-3 rounded-lg border cursor-pointer transition-all ${
-                  config.allowedClasses.includes(characterClass)
-                    ? 'bg-primary-600 border-primary-500'
-                    : 'bg-dark-700 border-dark-600 hover:bg-dark-600'
-                }`}
-                onClick={() => handleClassToggle(characterClass)}
-              >
-                <div className="font-medium text-sm">
-                  {CHARACTER_NAMES[characterClass]}
+          <div className="grid grid-cols-2 gap-3">
+            {allCharacterClasses.map((characterClass) => {
+              const isAlternativeEvil = [CharacterClass.VAMPIRO, CharacterClass.TRAIDOR, CharacterClass.ZUMBI, CharacterClass.BOBO].includes(characterClass)
+              const isDisabled = isAlternativeEvil && config.numberOfAlternativeEvil === 0
+              
+              return (
+                <div
+                  key={characterClass}
+                  className={`p-3 rounded-lg border transition-all ${
+                    isDisabled
+                      ? 'bg-dark-800 border-dark-700 opacity-50 cursor-not-allowed'
+                      : config.allowedClasses.includes(characterClass)
+                      ? 'bg-primary-600 border-primary-500 cursor-pointer'
+                      : 'bg-dark-700 border-dark-600 hover:bg-dark-600 cursor-pointer'
+                  }`}
+                  onClick={() => !isDisabled && handleClassToggle(characterClass)}
+                >
+                  <div className="font-medium text-sm">
+                    {CHARACTER_NAMES[characterClass]}
+                  </div>
                 </div>
-                <div className="text-xs text-dark-300 mt-1 line-clamp-2">
-                  {CHARACTER_DESCRIPTIONS[characterClass]}
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
 
         {/* Configurações Avançadas */}
         <div className="mb-6">
-          <div className="flex gap-3 mb-4">
+          <div className="flex flex-col md:flex-row gap-2 md:gap-3 mb-4">
             <button
               onClick={() => setShowAdvanced(!showAdvanced)}
-              className="btn-secondary"
+              className="btn-secondary text-sm py-2 px-4"
             >
               {showAdvanced ? 'Ocultar' : 'Mostrar'} Configurações Avançadas
             </button>
             <button
               onClick={handleResetConfig}
-              className="btn-secondary text-red-400 hover:text-red-300 hover:bg-red-900/20"
+              className="btn-secondary text-red-400 hover:text-red-300 hover:bg-red-900/20 text-sm py-2 px-4"
             >
               🔄 Resetar Configurações
             </button>
