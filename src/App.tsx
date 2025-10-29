@@ -20,12 +20,14 @@ function App() {
     <div className="min-h-screen bg-gradient-to-br from-dark-900 via-dark-800 to-dark-900">
       <div className="container mx-auto px-4 py-4 md:py-8">
         <header className="text-center mb-6 md:mb-8">
-          <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-primary-600 mb-2 md:mb-4">
+          <h1 className={`${gameState ? 'text-xl sm:text-2xl font-semibold' : 'text-3xl sm:text-4xl md:text-6xl font-bold'} text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-primary-600 ${gameState ? 'mb-1' : 'mb-2 md:mb-4'}`}>
             🐺 Lobisomem
           </h1>
-          <p className="text-dark-300 text-sm sm:text-base md:text-lg">
-            Jogo de dedução social inspirado em Town of Salem
-          </p>
+          {!gameState && (
+            <p className="text-dark-300 text-sm sm:text-base md:text-lg">
+              Jogo de dedução social inspirado em Town of Salem
+            </p>
+          )}
 
           {/* Botão para ver todas as classes */}
           {!gameState && (

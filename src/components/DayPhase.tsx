@@ -68,6 +68,86 @@ export default function DayPhase({
   const currentVoter = alivePlayers[currentVoterIndex]
   const currentMayor = players.find(p => p.id === (newMayorId || mayorId))
 
+  const getVoteCount = (playerId: string) => {
+    return Object.values(votes).filter(targetId => targetId === playerId).length
+  }
+
+  const renderVoteIndicators = (count: number) => {
+    if (count === 0) return null
+    
+    if (count <= 5) {
+      return (
+        <div className="flex justify-center gap-1 mt-1">
+          {Array.from({ length: count }).map((_, i) => (
+            <div key={i} className="w-1.5 h-1.5 bg-yellow-400 rounded-full" />
+          ))}
+        </div>
+      )
+    }
+    
+    if (count <= 10) {
+      return (
+        <>
+          <div className="flex justify-center gap-1 mb-1">
+            {Array.from({ length: count - 5 }).map((_, i) => (
+              <div key={i} className="w-1.5 h-1.5 bg-yellow-400 rounded-full" />
+            ))}
+          </div>
+          <div className="flex justify-center gap-1">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="w-1.5 h-1.5 bg-yellow-400 rounded-full" />
+            ))}
+          </div>
+        </>
+      )
+    }
+    
+    return (
+      <div className="flex flex-col items-center mt-1">
+        <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full" />
+        <div className="text-xs text-yellow-400 font-semibold">{count}</div>
+      </div>
+    )
+  }
+
+  const renderMayorReelectionVoteIndicators = (count: number) => {
+    if (count === 0) return null
+    
+    if (count <= 5) {
+      return (
+        <div className="flex justify-center gap-1 mt-1">
+          {Array.from({ length: count }).map((_, i) => (
+            <div key={i} className="w-1.5 h-1.5 bg-yellow-400 rounded-full" />
+          ))}
+        </div>
+      )
+    }
+    
+    if (count <= 10) {
+      return (
+        <>
+          <div className="flex justify-center gap-1 mb-1">
+            {Array.from({ length: count - 5 }).map((_, i) => (
+              <div key={i} className="w-1.5 h-1.5 bg-yellow-400 rounded-full" />
+            ))}
+          </div>
+          <div className="flex justify-center gap-1">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="w-1.5 h-1.5 bg-yellow-400 rounded-full" />
+            ))}
+          </div>
+        </>
+      )
+    }
+    
+    return (
+      <div className="flex flex-col items-center mt-1">
+        <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full" />
+        <div className="text-xs text-yellow-400 font-semibold">{count}</div>
+      </div>
+    )
+  }
+
   // Timer para discussão
   useEffect(() => {
     if (currentStep === 'discussion' && discussionTimeLeft > 0) {
@@ -227,6 +307,10 @@ const handleMayorTieChoice = (expelledPlayerId: string) => {
     return 'Nenhum vencedor'
   }
 
+  const getMayorReelectionVoteCount = (playerId: string) => {
+    return Object.values(mayorReelectionVotes).filter(targetId => targetId === playerId).length
+  }
+
   // Função para detectar mortes por amor quando um jogador é expulso
   const getLoveDeaths = (expelledPlayerId: string) => {
     const expelledPlayer = players.find(p => p.id === expelledPlayerId)
@@ -250,8 +334,8 @@ const handleMayorTieChoice = (expelledPlayerId: string) => {
       {shouldShowHeader && (
         <div className="card mb-6">
           <div className="flex flex-col items-center gap-4">
-            <div className="flex flex-col sm:flex-row items-center sm:justify-center gap-3 w-full">
-              <p className="text-dark-300 text-center">
+            <div className="flex justify-between items-center w-full">
+              <p className="text-dark-300">
                 Fase: <span className="text-primary-400 font-semibold">
                   Dia {dayNumber}
                 </span>
@@ -434,16 +518,29 @@ const handleMayorTieChoice = (expelledPlayerId: string) => {
             {!config.mayorVotingAnonymous && Object.keys(mayorReelectionVotes).length > 0 && (
               <div className="bg-dark-700 rounded-lg p-2">
                 <h4 className="font-semibold text-xs mb-1">📊 Votos até agora:</h4>
-                <div className="grid md:grid-cols-2 gap-1 text-xs">
-                  {Object.entries(mayorReelectionVotes).map(([voterId, targetId]) => {
-                    const voter = players.find(p => p.id === voterId)
-                    const target = players.find(p => p.id === targetId)
-                    return (
-                      <div key={voterId} className="text-dark-300">
-                        {voter?.name} → {target?.name}
-                      </div>
-                    )
-                  })}
+                <div className="flex gap-2">
+                  <div className="w-1/2 text-xs">
+                    {Object.entries(mayorReelectionVotes).slice(0, Math.ceil(Object.keys(mayorReelectionVotes).length / 2)).map(([voterId, targetId]) => {
+                      const voter = players.find(p => p.id === voterId)
+                      const target = players.find(p => p.id === targetId)
+                      return (
+                        <div key={voterId} className="text-dark-300">
+                          {voter?.name} → {target?.name}
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div className="w-1/2 text-xs">
+                    {Object.entries(mayorReelectionVotes).slice(Math.ceil(Object.keys(mayorReelectionVotes).length / 2)).map(([voterId, targetId]) => {
+                      const voter = players.find(p => p.id === voterId)
+                      const target = players.find(p => p.id === targetId)
+                      return (
+                        <div key={voterId} className="text-dark-300">
+                          {voter?.name} → {target?.name}
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
               </div>
             )}
@@ -456,6 +553,7 @@ const handleMayorTieChoice = (expelledPlayerId: string) => {
                   className="px-4 py-2 rounded-lg border bg-dark-700 border-dark-600 hover:bg-dark-600 transition-all"
                 >
                   <div className="font-medium">{player.name}</div>
+                  {renderMayorReelectionVoteIndicators(getMayorReelectionVoteCount(player.id))}
                 </button>
               ))}
             </div>
@@ -477,22 +575,6 @@ const handleMayorTieChoice = (expelledPlayerId: string) => {
                 </p>
               )}
             </div>
-
-            {/* Mostrar detalhes da votação */}
-          <div className="bg-dark-700 rounded-lg p-2">
-            <h4 className="font-semibold text-xs mb-1">📊 Detalhes da Votação:</h4>
-            <div className="grid md:grid-cols-2 gap-1 text-xs">
-              {Object.entries(mayorReelectionVotes).map(([voterId, targetId]) => {
-                const voter = players.find(p => p.id === voterId)
-                const target = players.find(p => p.id === targetId)
-                return (
-                  <div key={voterId} className="text-dark-300">
-                    {voter?.name} → {target?.name}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
 
             <button
               onClick={handleMayorReelectionComplete}
@@ -524,16 +606,29 @@ const handleMayorTieChoice = (expelledPlayerId: string) => {
             {showVotes && Object.keys(votes).length > 0 && (
               <div className="bg-dark-700 rounded-lg p-2">
                 <h4 className="font-semibold text-xs mb-1">📊 Votos até agora:</h4>
-                <div className="grid md:grid-cols-2 gap-1 text-xs">
-                  {Object.entries(votes).map(([voterId, targetId]) => {
-                    const voter = players.find(p => p.id === voterId)
-                    const target = targetId === 'no_expulsion' ? 'Não expulsar' : players.find(p => p.id === targetId)?.name
-                    return (
-                      <div key={voterId} className="text-dark-300">
-                        {voter?.name} → {target}
-                      </div>
-                    )
-                  })}
+                <div className="flex gap-2">
+                  <div className="w-1/2 text-xs">
+                    {Object.entries(votes).slice(0, Math.ceil(Object.keys(votes).length / 2)).map(([voterId, targetId]) => {
+                      const voter = players.find(p => p.id === voterId)
+                      const target = targetId === 'no_expulsion' ? 'Não expulsar' : players.find(p => p.id === targetId)?.name
+                      return (
+                        <div key={voterId} className="text-dark-300">
+                          {voter?.name} → {target}
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div className="w-1/2 text-xs">
+                    {Object.entries(votes).slice(Math.ceil(Object.keys(votes).length / 2)).map(([voterId, targetId]) => {
+                      const voter = players.find(p => p.id === voterId)
+                      const target = targetId === 'no_expulsion' ? 'Não expulsar' : players.find(p => p.id === targetId)?.name
+                      return (
+                        <div key={voterId} className="text-dark-300">
+                          {voter?.name} → {target}
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
               </div>
             )}
@@ -547,6 +642,7 @@ const handleMayorTieChoice = (expelledPlayerId: string) => {
                     className="px-4 py-2 rounded-lg border bg-dark-700 border-dark-600 hover:bg-dark-600 transition-all"
                   >
                     <div className="font-medium">{player.name}</div>
+                    {renderVoteIndicators(getVoteCount(player.id))}
                   </button>
                 ))}
               </div>
@@ -631,22 +727,6 @@ const handleMayorTieChoice = (expelledPlayerId: string) => {
               }
               return null
             })()}
-
-            {/* Mostrar detalhes da votação */}
-            <div className="bg-dark-700 rounded-lg p-2">
-              <h4 className="font-semibold text-xs mb-1">📊 Detalhes da Votação:</h4>
-              <div className="grid md:grid-cols-2 gap-1 text-xs">
-                {Object.entries(votes).map(([voterId, targetId]) => {
-                  const voter = players.find(p => p.id === voterId)
-                  const target = targetId === 'no_expulsion' ? 'Não expulsar' : players.find(p => p.id === targetId)?.name
-                  return (
-                    <div key={voterId} className="text-dark-300">
-                      {voter?.name} → {target}
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
 
             <button
               onClick={handleExpulsionResultContinue}

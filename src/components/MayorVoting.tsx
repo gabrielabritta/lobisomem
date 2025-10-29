@@ -17,6 +17,48 @@ export default function MayorVoting({ players, config, onVotingComplete }: Mayor
   const alivePlayers = players.filter(p => p.isAlive)
   const currentVoter = alivePlayers[currentVoterIndex]
 
+  const getVoteCount = (playerId: string) => {
+    return Object.values(votes).filter(targetId => targetId === playerId).length
+  }
+
+  const renderVoteIndicators = (count: number) => {
+    if (count === 0) return null
+    
+    if (count <= 5) {
+      return (
+        <div className="flex justify-center gap-1 mt-1">
+          {Array.from({ length: count }).map((_, i) => (
+            <div key={i} className="w-1.5 h-1.5 bg-yellow-400 rounded-full" />
+          ))}
+        </div>
+      )
+    }
+    
+    if (count <= 10) {
+      return (
+        <>
+          <div className="flex justify-center gap-1 mb-1">
+            {Array.from({ length: count - 5 }).map((_, i) => (
+              <div key={i} className="w-1.5 h-1.5 bg-yellow-400 rounded-full" />
+            ))}
+          </div>
+          <div className="flex justify-center gap-1">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="w-1.5 h-1.5 bg-yellow-400 rounded-full" />
+            ))}
+          </div>
+        </>
+      )
+    }
+    
+    return (
+      <div className="flex flex-col items-center mt-1">
+        <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full" />
+        <div className="text-xs text-yellow-400 font-semibold">{count}</div>
+      </div>
+    )
+  }
+
   const handleVote = (targetId: string) => {
     const newVotes = { ...votes, [currentVoter.id]: targetId }
     setVotes(newVotes)
@@ -72,22 +114,6 @@ export default function MayorVoting({ players, config, onVotingComplete }: Mayor
             )}
           </div>
 
-          {/* Mostrar detalhes da votação */}
-          <div className="bg-dark-700 rounded-lg p-4">
-            <h4 className="font-semibold mb-3">📊 Detalhes da Votação:</h4>
-            <div className="grid md:grid-cols-2 gap-2 text-sm">
-              {Object.entries(votes).map(([voterId, targetId]) => {
-                const voter = players.find(p => p.id === voterId)
-                const target = players.find(p => p.id === targetId)
-                return (
-                  <div key={voterId} className="text-dark-300">
-                    {voter?.name} → {target?.name}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-
           <button
             onClick={handleContinue}
             className="btn-primary"
@@ -119,16 +145,29 @@ export default function MayorVoting({ players, config, onVotingComplete }: Mayor
         {showVotes && Object.keys(votes).length > 0 && (
           <div className="bg-dark-700 rounded-lg p-2">
             <h4 className="font-semibold text-xs mb-1">📊 Votos até agora:</h4>
-            <div className="grid md:grid-cols-2 gap-1 text-xs">
-              {Object.entries(votes).map(([voterId, targetId]) => {
-                const voter = players.find(p => p.id === voterId)
-                const target = players.find(p => p.id === targetId)
-                return (
-                  <div key={voterId} className="text-dark-300">
-                    {voter?.name} → {target?.name}
-                  </div>
-                )
-              })}
+            <div className="flex gap-2">
+              <div className="w-1/2 text-xs">
+                {Object.entries(votes).slice(0, Math.ceil(Object.keys(votes).length / 2)).map(([voterId, targetId]) => {
+                  const voter = players.find(p => p.id === voterId)
+                  const target = players.find(p => p.id === targetId)
+                  return (
+                    <div key={voterId} className="text-dark-300">
+                      {voter?.name} → {target?.name}
+                    </div>
+                  )
+                })}
+              </div>
+              <div className="w-1/2 text-xs">
+                {Object.entries(votes).slice(Math.ceil(Object.keys(votes).length / 2)).map(([voterId, targetId]) => {
+                  const voter = players.find(p => p.id === voterId)
+                  const target = players.find(p => p.id === targetId)
+                  return (
+                    <div key={voterId} className="text-dark-300">
+                      {voter?.name} → {target?.name}
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           </div>
         )}
@@ -141,6 +180,7 @@ export default function MayorVoting({ players, config, onVotingComplete }: Mayor
               className="px-4 py-2 rounded-lg border bg-dark-700 border-dark-600 hover:bg-dark-600 transition-all"
             >
               <div className="font-medium">{player.name}</div>
+              {renderVoteIndicators(getVoteCount(player.id))}
             </button>
           ))}
         </div>

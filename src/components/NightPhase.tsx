@@ -1313,8 +1313,8 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
       {shouldShowHeader && (
         <div className="card mb-6">
           <div className="flex flex-col items-center gap-4">
-            <div className="flex flex-col sm:flex-row items-center sm:justify-center gap-3 w-full">
-              <p className="text-dark-300 text-center">
+            <div className="flex justify-between items-center w-full">
+              <p className="text-dark-300">
                 Fase: <span className="text-primary-400 font-semibold">
                   Noite {nightNumber}
                 </span>

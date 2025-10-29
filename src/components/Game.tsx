@@ -267,8 +267,8 @@ export default function Game({ gameState, onGameReset }: GameProps) {
         currentGameState.currentPhase === GamePhase.ENDED) && (
         <div className="card mb-6">
           <div className="flex flex-col items-center gap-4">
-            <div className="flex flex-col sm:flex-row items-center sm:justify-center gap-3 w-full">
-              <p className="text-dark-300 text-center">
+            <div className="flex justify-between items-center w-full">
+              <p className="text-dark-300">
                 Fase: <span className="text-primary-400 font-semibold">
                   {currentGameState.currentPhase === GamePhase.CHARACTER_DISTRIBUTION && 'Distribuição de Classes'}
                   {currentGameState.currentPhase === GamePhase.SETUP && 'Ações Iniciais'}
