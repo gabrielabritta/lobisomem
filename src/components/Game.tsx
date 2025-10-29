@@ -261,16 +261,14 @@ export default function Game({ gameState, onGameReset }: GameProps) {
 
   return (
     <div className="max-w-4xl mx-auto">
-      {/* Header com informações do jogo - apenas para algumas fases */}
-      {(currentGameState.currentPhase === GamePhase.CHARACTER_DISTRIBUTION || 
-        currentGameState.currentPhase === GamePhase.SETUP || 
+      {/* Header com informações do jogo - apenas para algumas fases (exclui distribuição) */}
+      {(currentGameState.currentPhase === GamePhase.SETUP || 
         currentGameState.currentPhase === GamePhase.ENDED) && (
         <div className="card mb-3">
           <div className="flex flex-col items-center gap-2">
             <div className="flex justify-between items-center w-full">
               <p className="text-dark-300">
                 Fase: <span className="text-primary-400 font-semibold">
-                  {currentGameState.currentPhase === GamePhase.CHARACTER_DISTRIBUTION && 'Distribuição de Classes'}
                   {currentGameState.currentPhase === GamePhase.SETUP && 'Ações Iniciais'}
                   {currentGameState.currentPhase === GamePhase.ENDED && 'Fim de Jogo'}
                 </span>

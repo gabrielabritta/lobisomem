@@ -1373,6 +1373,8 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
           <>
                         {(() => {
               const currentPlayer = playersInPlayerActionsStep[currentPlayerIndex]
+              const currentCharacter = currentPlayer ? (currentPlayer.originalCharacter || currentPlayer.character) : undefined
+              const canSkip = !(currentCharacter === CharacterClass.VAMPIRO || currentCharacter === CharacterClass.ZUMBI)
               if (!currentPlayer) return null
 
               if (playerHasAction.has(currentPlayer.id)) {
@@ -1461,20 +1463,22 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
                             ))}
                         </div>
 
-                        <div className="text-center space-x-4">
+                        <div className={canSkip ? "grid grid-cols-2 gap-3 justify-items-center w-full" : "w-full flex justify-center"}>
                           <button
                             onClick={() => handlePlayerAction(getPlayerActionType(currentPlayer))}
                             disabled={!selectedTarget}
-                            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                            className={canSkip ? "btn-primary disabled:opacity-50 disabled:cursor-not-allowed w-full max-w-[180px] px-4 py-2" : "btn-primary disabled:opacity-50 disabled:cursor-not-allowed w-full px-4 py-2"}
                           >
-                            ✅ Confirmar Ação
+                            ✅ Confirmar
                           </button>
-                          <button
-                            onClick={() => handlePlayerAction(getPlayerActionType(currentPlayer))}
-                            className="btn-secondary"
-                          >
-                            ⏭️ Pular Ação
-                          </button>
+                          {canSkip && (
+                            <button
+                              onClick={() => handlePlayerAction(getPlayerActionType(currentPlayer))}
+                              className="btn-secondary w-full max-w-[180px] px-4 py-2"
+                            >
+                              ⏭️ Pular
+                            </button>
+                          )}
                         </div>
                       </div>
                     )}

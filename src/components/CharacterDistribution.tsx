@@ -127,13 +127,6 @@ export default function CharacterDistribution({ players, onDistributionComplete 
                 </p>
               </div>
 
-              <div className="bg-dark-700 rounded-lg p-4">
-                <p className="text-sm text-dark-300">
-                  💡 <strong>Lembre-se:</strong> Mantenha sua classe em segredo!
-                  Use suas habilidades com sabedoria para ajudar seu time a vencer.
-                </p>
-              </div>
-
               {hasSeenCharacter && (
                 <button
                   onClick={handleNextPlayer}
@@ -146,11 +139,7 @@ export default function CharacterDistribution({ players, onDistributionComplete 
           )}
         </div>
 
-        <div className="text-sm text-dark-400">
-          <p>
-            🔄 Passe o dispositivo para o próximo jogador após ver sua classe
-          </p>
-        </div>
+        {/* Mensagem de passar dispositivo removida conforme solicitado */}
       </div>
     </div>
   )
