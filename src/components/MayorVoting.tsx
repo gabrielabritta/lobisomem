@@ -68,7 +68,14 @@ export default function MayorVoting({ players, config, onVotingComplete }: Mayor
     } else {
       // Processar resultado da votação
       const result = processVotes(newVotes)
-      setVotingResult(result)
+      // Em caso de empate, sortear um vencedor entre os empatados
+      if (result.tied && result.tiedPlayers && result.tiedPlayers.length > 0) {
+        const randomIndex = Math.floor(Math.random() * result.tiedPlayers.length)
+        const winner = result.tiedPlayers[randomIndex]
+        setVotingResult({ ...result, winner })
+      } else {
+        setVotingResult(result)
+      }
     }
   }
 

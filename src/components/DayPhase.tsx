@@ -203,7 +203,14 @@ export default function DayPhase({
     } else {
       // Processar resultado da votação de reeleição
       const result = processVotes(newVotes)
-      setMayorReelectionResult(result)
+      // Em caso de empate, sortear um vencedor dentre os empatados
+      let finalResult = result
+      if (result.tied && result.tiedPlayers && result.tiedPlayers.length > 0) {
+        const randomIndex = Math.floor(Math.random() * result.tiedPlayers.length)
+        const winner = result.tiedPlayers[randomIndex]
+        finalResult = { ...result, winner }
+      }
+      setMayorReelectionResult(finalResult)
       setCurrentStep('mayor_reelection_result')
     }
   }
