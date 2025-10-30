@@ -164,6 +164,7 @@ function WitchInterface({ witch, actions, players, witchPotions, onWitchAction, 
           >
             Avançar
           </button>
+          <div className="text-sm text-primary-400">👥 {players.length} vivos</div>
         </div>
       )
     }
@@ -603,15 +604,11 @@ function VidenteInterface({ vidente, alivePlayers, silencedThisNight, onVidenteA
           </div>
         )}
         
-        <p className="text-dark-300 mb-4">
+        <p className="text-dark-300 mb-2">
           Você pode usar sua habilidade para ver a índole de um jogador.
         </p>
-        <div className="bg-purple-900/30 border border-purple-700 rounded-lg p-3 mb-4">
-          <p className="text-purple-300 font-semibold">ℹ️ Informação:</p>
-          <p className="text-purple-200 text-sm">
-            Você descobrirá se a pessoa é do bem (BOM) ou do mal (MAU).
-          </p>
-        </div>
+        
+        <div className="text-sm text-primary-400">👥 {alivePlayers.length} vivos</div>
       </div>
 
       {/* Seleção de alvo */}
@@ -943,6 +940,7 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
   const [currentStep, setCurrentStep] = useState<NightStep>('werewolves')
   const [actions, setActions] = useState<GameAction[]>([])
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0)
+  const [playerActionsStartIndex, setPlayerActionsStartIndex] = useState<number | null>(null)
   const [selectedTarget, setSelectedTarget] = useState<string>('')
   const [usedAbilities, setUsedAbilities] = useState<{ [playerId: string]: string[] }>(gameState?.usedAbilities || {})
   const [investigationResults, setInvestigationResults] = useState<{ playerId: string, result: string, type: 'vidente' | 'medium' }[]>([])
@@ -977,8 +975,19 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
   })
   const playerHasAction = new Set(actionPlayers.map(p => p.id))
 
-  // Lista de jogadores para o loop principal de ações noturnas
-  const playersInPlayerActionsStep = alivePlayers
+  // Lista de jogadores para o loop principal de ações noturnas (com início aleatório)
+  const playersInPlayerActionsStep = playerActionsStartIndex === null
+    ? alivePlayers
+    : [...alivePlayers.slice(playerActionsStartIndex), ...alivePlayers.slice(0, playerActionsStartIndex)]
+
+  // Definir índice inicial aleatório ao entrar na etapa de ações dos jogadores
+  useEffect(() => {
+    if (currentStep === 'player_actions' && playerActionsStartIndex === null && alivePlayers.length > 0) {
+      const start = Math.floor(Math.random() * alivePlayers.length)
+      setPlayerActionsStartIndex(start)
+      setCurrentPlayerIndex(0) // sempre começar do início do array rotacionado
+    }
+  }, [currentStep, playerActionsStartIndex, alivePlayers.length])
 
   console.log('Jogadores com ações:', actionPlayers.map(p => ({ name: p.name, character: p.character })))
 
@@ -1502,7 +1511,7 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
                             Escolha um jogador para {getActionDescription(currentPlayer)}
                           </p>
                           <div className="text-sm text-primary-400">
-                            Jogador {currentPlayerIndex + 1} de {playersInPlayerActionsStep.length}
+                            👥 {alivePlayers.length} vivos
                           </div>
 
                           {currentPlayer.character === CharacterClass.VAMPIRO && (
@@ -1583,7 +1592,8 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
                       </div>
                     )}
                     
-                    <p className="text-dark-300 mb-4">Você é um lobisomem. A alcateia já escolheu a vítima.</p>
+                    <p className="text-dark-300 mb-2">Você é um lobisomem. A alcateia já escolheu a vítima.</p>
+                    <div className="text-sm text-primary-400">👥 {alivePlayers.length} vivos</div>
                     <button onClick={advanceToNextPlayerOrStep} className="btn-primary">
                       Continuar
                     </button>
@@ -1602,7 +1612,8 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
                       </div>
                     )}
                     
-                    <p className="text-dark-300 mb-4">Você é a Bruxa. Seu turno será no final da noite.</p>
+                    <p className="text-dark-300 mb-2">Você é a Bruxa. Seu turno será no final da noite.</p>
+                    <div className="text-sm text-primary-400">👥 {alivePlayers.length} vivos</div>
                     <button onClick={advanceToNextPlayerOrStep} className="btn-primary">
                       Continuar
                     </button>
@@ -1621,7 +1632,8 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
                       </div>
                     )}
                     
-                    <p className="text-dark-300 mb-4">Você é o Ocultista. Você age em um momento diferente.</p>
+                    <p className="text-dark-300 mb-2">Você é o Ocultista. Você age em um momento diferente.</p>
+                    <div className="text-sm text-primary-400">👥 {alivePlayers.length} vivos</div>
                     <button onClick={advanceToNextPlayerOrStep} className="btn-primary">
                       Continuar
                     </button>
@@ -1646,9 +1658,10 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
                         </div>
                       )}
                       
-                      <p className="text-dark-300 mb-4">
+                      <p className="text-dark-300 mb-2">
                         Você é um Traidor. Você deve ajudar os lobisomens a vencer.
                       </p>
+                      <div className="text-sm text-primary-400">👥 {alivePlayers.length} vivos</div>
                     </div>
 
                     {aliveWerewolves.length > 0 ? (
@@ -1711,6 +1724,7 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
                   <p className="text-dark-300 mb-4">
                     Você não tem nenhuma ação para realizar esta noite. Você dorme profundamente.
                   </p>
+                  <div className="text-sm text-primary-400 mb-2">👥 {alivePlayers.length} vivos</div>
                   <button
                     onClick={advanceToNextPlayerOrStep}
                     className="btn-primary"
