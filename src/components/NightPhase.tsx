@@ -975,19 +975,50 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
   })
   const playerHasAction = new Set(actionPlayers.map(p => p.id))
 
-  // Lista de jogadores para o loop principal de ações noturnas (com início aleatório)
-  const playersInPlayerActionsStep = playerActionsStartIndex === null
-    ? alivePlayers
-    : [...alivePlayers.slice(playerActionsStartIndex), ...alivePlayers.slice(0, playerActionsStartIndex)]
+  // Lista de jogadores para o loop principal de ações noturnas
+  // - Só no sapatinho: ordem aleatória (início rotacionado)
+  // - Clássico: ordenar por classe (ordem definida) e incluir Occult conforme classe copiada
+  const classOrder: CharacterClass[] = [
+    CharacterClass.GUARDIAO,
+    CharacterClass.HEMOMANTE,
+    CharacterClass.LOBISOMEM,
+    CharacterClass.LOBISOMEM_VOODOO,
+    CharacterClass.LOBISOMEM_MORDACA,
+    CharacterClass.VAMPIRO,
+    CharacterClass.ZUMBI,
+    CharacterClass.VIDENTE,
+    CharacterClass.MEDIUM,
+    CharacterClass.HEROI,
+    CharacterClass.BRUXA
+  ]
+
+  const getPlayerEffectiveClass = (p: Player) => p.originalCharacter || p.character
+
+  let playersInPlayerActionsStep = alivePlayers
+
+  if (gameState?.config.gameMode === 'classic') {
+    playersInPlayerActionsStep = [...alivePlayers]
+      .filter(p => classOrder.includes(getPlayerEffectiveClass(p)))
+      .sort((a, b) => classOrder.indexOf(getPlayerEffectiveClass(a)) - classOrder.indexOf(getPlayerEffectiveClass(b)))
+  } else {
+    playersInPlayerActionsStep = playerActionsStartIndex === null
+      ? alivePlayers
+      : [...alivePlayers.slice(playerActionsStartIndex), ...alivePlayers.slice(0, playerActionsStartIndex)]
+  }
 
   // Definir índice inicial aleatório ao entrar na etapa de ações dos jogadores
   useEffect(() => {
-    if (currentStep === 'player_actions' && playerActionsStartIndex === null && alivePlayers.length > 0) {
+    const classic = gameState?.config.gameMode === 'classic'
+    if (!classic && currentStep === 'player_actions' && playerActionsStartIndex === null && alivePlayers.length > 0) {
       const start = Math.floor(Math.random() * alivePlayers.length)
       setPlayerActionsStartIndex(start)
-      setCurrentPlayerIndex(0) // sempre começar do início do array rotacionado
+      setCurrentPlayerIndex(0)
     }
-  }, [currentStep, playerActionsStartIndex, alivePlayers.length])
+    if (classic && currentStep === 'player_actions') {
+      // no clássico, começar sempre do início da lista ordenada por classe
+      setCurrentPlayerIndex(0)
+    }
+  }, [currentStep, playerActionsStartIndex, alivePlayers.length, gameState?.config.gameMode])
 
   console.log('Jogadores com ações:', actionPlayers.map(p => ({ name: p.name, character: p.character })))
 
@@ -1307,8 +1338,224 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
   }
 
   // Determinar se deve mostrar o cabeçalho
-  const shouldShowHeader = currentStep === 'werewolves' || currentStep === 'witch' || currentStep === 'complete'
+  const isClassicMode = gameState?.config.gameMode === 'classic'
+  const shouldShowHeader = isClassicMode || currentStep === 'werewolves' || currentStep === 'witch' || currentStep === 'complete'
   
+  // Modo clássico: fluxo por classes
+  const classicEnabledClasses = (gameState?.config.allowedClasses || []).filter(cls => [
+    CharacterClass.GUARDIAO,
+    CharacterClass.HEMOMANTE,
+    CharacterClass.LOBISOMEM,
+    CharacterClass.LOBISOMEM_VOODOO,
+    CharacterClass.LOBISOMEM_MORDACA,
+    CharacterClass.VAMPIRO,
+    CharacterClass.ZUMBI,
+    CharacterClass.VIDENTE,
+    CharacterClass.MEDIUM,
+    CharacterClass.HEROI,
+    CharacterClass.BRUXA
+  ].includes(cls))
+
+  const classicStepsOrdered = classOrder.filter(cls => classicEnabledClasses.includes(cls))
+  const [classicStepIndex, setClassicStepIndex] = useState(0)
+  const advanceClassic = () => setClassicStepIndex(prev => Math.min(prev + 1, classicStepsOrdered.length))
+
+  const renderClassicStep = () => {
+    const currentClass = classicStepsOrdered[classicStepIndex]
+    if (!currentClass) {
+      return (
+        <div className="text-center space-y-4">
+          <button onClick={handleComplete} className="btn-primary">Continuar</button>
+        </div>
+      )
+    }
+
+    const actors = alivePlayers.filter(p => (p.originalCharacter || p.character) === currentClass)
+
+    // Lobisomens (grupo)
+    if (currentClass === CharacterClass.LOBISOMEM) {
+      if (actors.length === 0) {
+        return <FakeWerewolvesScreen onComplete={advanceClassic} />
+      }
+      return (
+        <div className="space-y-6">
+          <div className="text-center">
+            <h3 className="text-xl font-semibold mb-2">🐺 Lobisomens</h3>
+            <p className="text-dark-300 mb-4">Escolham quem será devorado esta noite.</p>
+            <div className="text-sm text-dark-400">Lobisomens: {actors.map(w => w.name).join(', ')}</div>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            {alivePlayers.filter(p => !isWerewolf(p.character)).map(player => (
+              <button key={player.id} onClick={() => setSelectedTarget(player.id)}
+                className={`px-4 py-2 rounded-lg border transition-all ${selectedTarget === player.id ? 'bg-red-600 border-red-500' : 'bg-dark-700 border-dark-600 hover:bg-dark-600'}`}>
+                <div className="font-medium">{player.name}</div>
+              </button>
+            ))}
+          </div>
+          <div className="text-center">
+            <button onClick={() => { if (!selectedTarget) return; actors.forEach(w => addAction(w.id, ActionType.KILL, selectedTarget)); setSelectedTarget(''); advanceClassic() }}
+              disabled={!selectedTarget} className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">✅ Confirmar</button>
+          </div>
+        </div>
+      )
+    }
+
+    // Lobisomem Voodoo
+    if (currentClass === CharacterClass.LOBISOMEM_VOODOO) {
+      const actor = actors[0]
+      if (!actor) {
+        return <FakeWerewolvesScreen onComplete={advanceClassic} />
+      }
+      return (
+        <VoodooWerewolfInterface
+          voodooWerewolf={actor}
+          players={alivePlayers}
+          silencedThisNight={silencedThisNight}
+          onVoodooAction={(useAbility, guessedClass, targetId) => { if (useAbility && targetId && guessedClass) { addAction(actor.id, ActionType.KILL, targetId, { guessedClass }) } setSelectedTarget(''); advanceClassic() }}
+        />
+      )
+    }
+
+    // Lobisomem Mordaça
+    if (currentClass === CharacterClass.LOBISOMEM_MORDACA) {
+      const actor = actors[0]
+      if (!actor) { return <FakeGagWerewolfScreen onComplete={advanceClassic} /> }
+      return (
+        <GagWerewolfInterface
+          gagWerewolf={actor}
+          players={alivePlayers}
+          usedAbilities={usedAbilities}
+          onGagAction={(useAbility, targetId) => { if (useAbility && targetId) { addAction(actor.id, ActionType.SILENCE, targetId); setSilencedThisNight(targetId) } setSelectedTarget(''); advanceClassic() }}
+        />
+      )
+    }
+
+    // Vidente
+    if (currentClass === CharacterClass.VIDENTE) {
+      const actor = actors[0]
+      if (!actor) { return <FakeWerewolvesScreen onComplete={advanceClassic} /> }
+      return (
+        <VidenteInterface
+          vidente={actor}
+          alivePlayers={alivePlayers}
+          silencedThisNight={silencedThisNight}
+          onVidenteAction={(useAbility, targetId) => { if (useAbility && targetId) { addAction(actor.id, ActionType.INVESTIGATE, targetId) } setSelectedTarget(''); advanceClassic() }}
+        />
+      )
+    }
+
+    // Médium
+    if (currentClass === CharacterClass.MEDIUM) {
+      const actor = actors[0]
+      if (!actor) { return <FakeWerewolvesScreen onComplete={advanceClassic} /> }
+      return (
+        <MediumInterface
+          medium={actor}
+          allPlayers={players}
+          usedAbilities={usedAbilities}
+          silencedThisNight={silencedThisNight}
+          onMediumAction={(useAbility, targetId) => { if (useAbility && targetId) { addAction(actor.id, ActionType.INVESTIGATE, targetId) } setSelectedTarget(''); advanceClassic() }}
+        />
+      )
+    }
+
+    // Bruxa: usar mesma interface/fake já existentes
+    if (currentClass === CharacterClass.BRUXA) {
+      if (alivePlayers.find(p => p.character === CharacterClass.BRUXA)) {
+        return (
+          <WitchInterface
+            witch={alivePlayers.find(p => p.character === CharacterClass.BRUXA)!}
+            actions={actions}
+            players={alivePlayers}
+            witchPotions={updatedWitchPotions}
+            onWitchAction={handleWitchAction}
+            onWitchComplete={advanceClassic}
+          />
+        )
+      }
+      return <FakeWitchScreen onComplete={advanceClassic} />
+    }
+
+    // Genéricos: Guardião, Hemomante, Vampiro, Zumbi, Herói
+    const actionTypeMap: Partial<Record<CharacterClass, ActionType>> = {
+      [CharacterClass.GUARDIAO]: ActionType.PROTECT,
+      [CharacterClass.HEMOMANTE]: ActionType.BLOOD_BOND,
+      [CharacterClass.VAMPIRO]: ActionType.KILL,
+      [CharacterClass.ZUMBI]: ActionType.INFECT,
+      [CharacterClass.HEROI]: ActionType.KILL
+    }
+
+    const actor = actors[0]
+    const actionType = actionTypeMap[currentClass] || ActionType.INVESTIGATE
+    if (!actor) {
+      // Fake genérica
+      return (
+        <div className="space-y-6 text-center">
+          <h3 className="text-xl font-semibold mb-2">{CHARACTER_NAMES[currentClass]}</h3>
+          <div className="bg-dark-700 rounded-lg p-4">
+            <p className="text-dark-300">Nenhum jogador desta classe está vivo.</p>
+          </div>
+          <button onClick={advanceClassic} className="btn-primary">Continuar</button>
+        </div>
+      )
+    }
+
+    // Seleção genérica
+    return (
+      <div className="space-y-6">
+        <div className="text-center">
+          <h3 className="text-xl font-semibold mb-2">{CHARACTER_NAMES[currentClass]} - {actor.name}</h3>
+          <p className="text-dark-300 mb-4">Escolha um jogador alvo.</p>
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          {alivePlayers.filter(p => p.id !== actor.id).map(player => (
+            <button key={player.id} onClick={() => setSelectedTarget(player.id)}
+              className={`px-4 py-2 rounded-lg border transition-all ${selectedTarget === player.id ? 'bg-primary-600 border-primary-500' : 'bg-dark-700 border-dark-600 hover:bg-dark-600'}`}>
+              <div className="font-medium">{player.name}</div>
+            </button>
+          ))}
+        </div>
+        <div className="text-center">
+          <button onClick={() => { if (!selectedTarget) return; addAction(actor.id, actionType, selectedTarget); setSelectedTarget(''); advanceClassic() }}
+            disabled={!selectedTarget}
+            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">✅ Confirmar</button>
+        </div>
+      </div>
+    )
+  }
+
+  if (isClassicMode) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        {shouldShowHeader && (
+          <div className="card mb-3">
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex justify-between items-center w-full">
+                <p className="text-dark-300">Fase: <span className="text-primary-400 font-semibold">Noite {nightNumber}</span></p>
+                <span className="text-sm text-dark-400">👥 {players.filter(p => p.isAlive).length} vivos</span>
+              </div>
+              {onShowGameStatus && onGameReset && (
+                <div className="flex gap-3 w-full sm:w-auto justify-center">
+                  <button onClick={onShowGameStatus} className="btn-secondary text-sm px-6 py-2 flex-1 sm:flex-initial min-w-[140px]" title="Abrir modal com situação geral do jogo">📊 Planilha</button>
+                  <button onClick={() => { if (confirm('Tem certeza que deseja iniciar uma nova partida? Todos os progressos atuais serão perdidos.')) { onGameReset && onGameReset() } }} className="btn-secondary text-sm px-6 py-2 flex-1 sm:flex-initial min-w-[140px]">🔄 Nova Partida</button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        <div className="card">
+          <h2 className="text-2xl font-bold mb-6 text-center">🌙 Noite {nightNumber}</h2>
+          {renderClassicStep()}
+          {classicStepIndex >= classicStepsOrdered.length && (
+            <div className="text-center mt-6">
+              <button onClick={handleComplete} className="btn-primary">Finalizar Noite</button>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-4xl mx-auto">
       {shouldShowHeader && (

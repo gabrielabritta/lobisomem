@@ -258,6 +258,23 @@ export default function GameSetup({ onGameStart }: GameSetupProps) {
         {/* Configurações Básicas */}
         <div className="grid md:grid-cols-2 gap-3 md:gap-6 mb-6">
           <div>
+            <label className="block text-sm font-medium mb-1">Modo de Jogo</label>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setConfig(prev => ({ ...prev, gameMode: 'sapatinho' }))}
+                className={`px-3 py-2 rounded border ${config.gameMode !== 'classic' ? 'bg-primary-600 border-primary-500' : 'bg-dark-700 border-dark-600 hover:bg-dark-600'}`}
+              >
+                Só no sapatinho
+              </button>
+              <button
+                onClick={() => setConfig(prev => ({ ...prev, gameMode: 'classic' }))}
+                className={`px-3 py-2 rounded border ${config.gameMode === 'classic' ? 'bg-primary-600 border-primary-500' : 'bg-dark-700 border-dark-600 hover:bg-dark-600'}`}
+              >
+                Modo Clássico
+              </button>
+            </div>
+          </div>
+          <div>
             <label className="block text-sm font-medium mb-1">
               Número de Jogadores: {config.numberOfPlayers}
             </label>

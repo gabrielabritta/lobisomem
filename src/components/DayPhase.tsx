@@ -338,7 +338,7 @@ const handleMayorTieChoice = (expelledPlayerId: string) => {
   }
 
   // Determinar se deve mostrar o cabeçalho
-  const shouldShowHeader = currentStep === 'deaths_announcement' || currentStep === 'expulsion_result' || currentStep === 'complete'
+  const shouldShowHeader = config.gameMode === 'classic' || currentStep === 'deaths_announcement' || currentStep === 'expulsion_result' || currentStep === 'complete'
   
   return (
     <div className="max-w-4xl mx-auto">

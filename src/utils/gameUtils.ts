@@ -476,6 +476,7 @@ export function createDefaultConfig(): GameConfig {
       CharacterClass.VAMPIRO
     ],
     discussionTime: 2,
+    gameMode: 'sapatinho',
     mayorVotingAnonymous: false,
     expulsionVotingAnonymous: false,
     allowNoExpulsionVote: true,

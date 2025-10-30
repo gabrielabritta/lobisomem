@@ -90,6 +90,7 @@ export interface GameConfig {
   numberOfAlternativeEvil: number; // Vampiro, Traidor, Zumbi, Bobo
   allowedClasses: CharacterClass[];
   discussionTime: number; // em minutos
+  gameMode?: 'classic' | 'sapatinho';
   mayorVotingAnonymous: boolean;
   expulsionVotingAnonymous: boolean;
   allowNoExpulsionVote: boolean;
