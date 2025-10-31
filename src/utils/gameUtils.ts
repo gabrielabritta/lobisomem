@@ -175,14 +175,14 @@ export function checkVictoryConditions(gameState: GameState): {
   const alivePlayers = gameState.players.filter(p => p.isAlive);
   const aliveWerewolves = alivePlayers.filter(p => isWerewolf(p.character));
   const aliveGood = alivePlayers.filter(p => p.team === Team.GOOD);
-  const aliveVampire = alivePlayers.find(p => p.character === CharacterClass.VAMPIRO);
+  const aliveVampires = alivePlayers.filter(p => p.character === CharacterClass.VAMPIRO);
   const aliveZombie = alivePlayers.find(p => p.character === CharacterClass.ZUMBI);
   const cupidPlayer = gameState.players.find(p => p.character === CharacterClass.CUPIDO);
 
   console.log('Verificando condições de vitória:', {
     totalAlive: alivePlayers.length,
     aliveWerewolves: aliveWerewolves.length,
-    aliveVampire: aliveVampire ? aliveVampire.name : null,
+    aliveVampires: aliveVampires.length,
     aliveZombie: aliveZombie ? aliveZombie.name : null
   })
 
@@ -202,30 +202,40 @@ export function checkVictoryConditions(gameState: GameState): {
     }
   }
 
-  // 2. Verificar vitória do Vampiro (sobrou apenas ele e mais um)
-  if (aliveVampire && alivePlayers.length === 2) {
-    console.log('Vampiro venceu!', { aliveVampire: aliveVampire.name, alivePlayers: alivePlayers.length })
+  // 2. Verificar vitória dos Vampiros (número >= não-vampiros) - PRIORIDADE sobre lobisomens
+  if (aliveVampires.length > 0) {
+    // Contar não-vampiros: todos os jogadores vivos exceto vampiros
+    const nonVampiresCount = alivePlayers.length - aliveVampires.length;
     
-    let winners = [aliveVampire.id];
-    
-    // Adicionar vencedores do Cupido na ordem correta
-    const cupidData = getCupidWinners(alivePlayers, cupidPlayer, Team.EVIL, winners);
-    
-    // Adicionar apaixonados do time vencedor no final da lista do time vencedor
-    winners.push(...cupidData.loversInWinningTeam);
-    
-    // Adicionar apaixonados que não são do time vencedor
-    winners.push(...cupidData.loversNotInWinningTeam);
-    
-    // Adicionar Cupido por último
-    winners.push(...cupidData.cupidWinners);
-    
-    return {
-      hasWinner: true,
-      winners,
-      winningTeam: Team.EVIL,
-      reason: 'Vampiro venceu - restaram apenas 2 jogadores'
-    };
+    if (aliveVampires.length >= nonVampiresCount) {
+      console.log('Vampiros venceram!', { 
+        aliveVampires: aliveVampires.map(v => v.name), 
+        nonVampiresCount,
+        totalAlive: alivePlayers.length 
+      })
+      
+      const vampireIds = aliveVampires.map(p => p.id);
+      let winners = [...vampireIds];
+      
+      // Adicionar vencedores do Cupido na ordem correta
+      const cupidData = getCupidWinners(alivePlayers, cupidPlayer, Team.EVIL, winners);
+      
+      // Adicionar apaixonados do time vencedor no final da lista do time vencedor
+      winners.push(...cupidData.loversInWinningTeam);
+      
+      // Adicionar apaixonados que não são do time vencedor
+      winners.push(...cupidData.loversNotInWinningTeam);
+      
+      // Adicionar Cupido por último
+      winners.push(...cupidData.cupidWinners);
+      
+      return {
+        hasWinner: true,
+        winners,
+        winningTeam: Team.EVIL,
+        reason: 'Vampiros venceram - número igual ou superior aos não-vampiros'
+      };
+    }
   }
 
   // 3. Verificar vitória dos Lobisomens (número >= não-lobisomens)
@@ -262,7 +272,7 @@ export function checkVictoryConditions(gameState: GameState): {
   }
 
   // Verificar vitória dos Inocentes (não há mais lobisomens ou vampiros)
-  if (aliveWerewolves.length === 0 && !aliveVampire && !aliveZombie) {
+  if (aliveWerewolves.length === 0 && aliveVampires.length === 0 && !aliveZombie) {
     let winners = aliveGood.map(p => p.id);
     
     // Adicionar vencedores do Cupido na ordem correta
