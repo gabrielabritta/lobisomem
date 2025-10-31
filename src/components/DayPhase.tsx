@@ -339,7 +339,7 @@ const handleMayorTieChoice = (expelledPlayerId: string) => {
 
   // Determinar se deve mostrar o cabeçalho
   const shouldShowHeader = config.gameMode === 'classic' || currentStep === 'deaths_announcement' || currentStep === 'expulsion_result' || currentStep === 'complete'
-  
+
   return (
     <div className="max-w-4xl mx-auto">
       {shouldShowHeader && (
@@ -543,14 +543,14 @@ const handleMayorTieChoice = (expelledPlayerId: string) => {
                   </div>
                   <div className="w-1/2 text-xs">
                     {Object.entries(mayorReelectionVotes).slice(Math.ceil(Object.keys(mayorReelectionVotes).length / 2)).map(([voterId, targetId]) => {
-                      const voter = players.find(p => p.id === voterId)
-                      const target = players.find(p => p.id === targetId)
-                      return (
-                        <div key={voterId} className="text-dark-300">
-                          {voter?.name} → {target?.name}
-                        </div>
-                      )
-                    })}
+                    const voter = players.find(p => p.id === voterId)
+                    const target = players.find(p => p.id === targetId)
+                    return (
+                      <div key={voterId} className="text-dark-300">
+                        {voter?.name} → {target?.name}
+                      </div>
+                    )
+                  })}
                   </div>
                 </div>
               </div>
@@ -631,14 +631,14 @@ const handleMayorTieChoice = (expelledPlayerId: string) => {
                   </div>
                   <div className="w-1/2 text-xs">
                     {Object.entries(votes).slice(Math.ceil(Object.keys(votes).length / 2)).map(([voterId, targetId]) => {
-                      const voter = players.find(p => p.id === voterId)
-                      const target = targetId === 'no_expulsion' ? 'Não expulsar' : players.find(p => p.id === targetId)?.name
-                      return (
-                        <div key={voterId} className="text-dark-300">
-                          {voter?.name} → {target}
-                        </div>
-                      )
-                    })}
+                    const voter = players.find(p => p.id === voterId)
+                    const target = targetId === 'no_expulsion' ? 'Não expulsar' : players.find(p => p.id === targetId)?.name
+                    return (
+                      <div key={voterId} className="text-dark-300">
+                        {voter?.name} → {target}
+                      </div>
+                    )
+                  })}
                   </div>
                 </div>
               </div>
@@ -646,16 +646,16 @@ const handleMayorTieChoice = (expelledPlayerId: string) => {
 
             <div className="space-y-3">
               <div className="grid grid-cols-3 gap-3">
-                {alivePlayers.map(player => (
-                  <button
-                    key={player.id}
-                    onClick={() => handleVote(player.id)}
+              {alivePlayers.map(player => (
+                <button
+                  key={player.id}
+                  onClick={() => handleVote(player.id)}
                     className="px-4 py-2 rounded-lg border bg-dark-700 border-dark-600 hover:bg-dark-600 transition-all"
-                  >
-                    <div className="font-medium">{player.name}</div>
+                >
+                  <div className="font-medium">{player.name}</div>
                     {renderVoteIndicators(getVoteCount(player.id))}
-                  </button>
-                ))}
+                </button>
+              ))}
               </div>
 
               {/* Opção de não expulsar (se permitido) */}

@@ -19,7 +19,7 @@ export function getCharacterTeam(character: CharacterClass): Team {
   if (EVIL_CLASSES.includes(character)) {
     return Team.EVIL;
   }
-  return Team.NEUTRAL; // Para Occult antes de copiar
+  return Team.NEUTRAL;
 }
 
 // Função para verificar se uma classe é lobisomem

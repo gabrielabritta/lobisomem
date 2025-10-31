@@ -267,14 +267,14 @@ export default function Game({ gameState, onGameReset }: GameProps) {
         <div className="card mb-3">
           <div className="flex flex-col items-center gap-2">
             <div className="flex justify-between items-center w-full">
-              <p className="text-dark-300">
-                Fase: <span className="text-primary-400 font-semibold">
-                  {currentGameState.currentPhase === GamePhase.SETUP && 'Ações Iniciais'}
+            <p className="text-dark-300">
+              Fase: <span className="text-primary-400 font-semibold">
+                {currentGameState.currentPhase === GamePhase.SETUP && 'Ações Iniciais'}
                   {currentGameState.currentPhase === GamePhase.ENDED && 'Fim de Jogo'}
-                </span>
-              </p>
+              </span>
+            </p>
               <span className="text-sm text-dark-400">👥 {currentGameState.players.filter(p => p.isAlive).length} vivos</span>
-            </div>
+          </div>
             <div className="flex gap-3 w-full sm:w-auto justify-center">
               <button
                 onClick={() => setShowGameStatus(true)}

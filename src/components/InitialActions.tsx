@@ -38,7 +38,10 @@ export default function InitialActions({ players, onActionsComplete }: InitialAc
           ...player,
           originalCharacter: player.character,
           character: targetPlayer.character,
-          team: targetPlayer.team
+          team: targetPlayer.team,
+          // Copy special status properties when copying certain classes
+          hasProtection: targetPlayer.character === CharacterClass.TALISMA,
+          isInfected: targetPlayer.character === CharacterClass.ZUMBI
         }
       }
       return player

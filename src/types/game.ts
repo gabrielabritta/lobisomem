@@ -150,7 +150,8 @@ export const GOOD_CLASSES: CharacterClass[] = [
   CharacterClass.BALA_DE_PRATA,
   CharacterClass.GUARDIAO,
   CharacterClass.HEMOMANTE,
-  CharacterClass.HEROI
+  CharacterClass.HEROI,
+  CharacterClass.OCCULT
 ];
 
 export const EVIL_CLASSES: CharacterClass[] = [

@@ -53,6 +53,21 @@ function FakeWerewolvesScreen({ onComplete }: SimpleOnCompleteProps) {
   )
 }
 
+function FakeVoodooWerewolfScreen({ onComplete }: SimpleOnCompleteProps) {
+  return (
+    <div className="space-y-6">
+      <div className="text-center">
+        <h3 className="text-2xl font-bold mb-4">Lobisomem Voodoo</h3>
+      </div>
+      <div className="bg-red-900/30 border-2 border-red-700 rounded-lg p-6">
+        <p className="text-red-100 text-xl font-semibold text-center mb-2">⚠️ Nenhum lobisomem voodoo vivo</p>
+        <p className="text-dark-200 text-center text-lg">Siga o fluxo normalmente para não revelar esta informação.</p>
+      </div>
+      <button onClick={onComplete} className="btn-primary w-full text-lg">Continuar</button>
+    </div>
+  )
+}
+
 function FakeGagWerewolfScreen({ onComplete }: SimpleOnCompleteProps) {
   return (
     <div className="space-y-6">
@@ -1356,25 +1371,33 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
     CharacterClass.BRUXA
   ].includes(cls))
 
-  const classicStepsOrdered = classOrder.filter(cls => classicEnabledClasses.includes(cls))
+  // Verificar se pelo menos um tipo de lobisomem está habilitado
+  const hasAnyWerewolfEnabled = classicEnabledClasses.some(cls => 
+    cls === CharacterClass.LOBISOMEM || 
+    cls === CharacterClass.LOBISOMEM_VOODOO || 
+    cls === CharacterClass.LOBISOMEM_MORDACA
+  )
+
+  // Incluir etapa LOBISOMEM se houver qualquer tipo de lobisomem habilitado
+  const classicStepsOrdered = classOrder.filter(cls => {
+    if (cls === CharacterClass.LOBISOMEM) {
+      return hasAnyWerewolfEnabled
+    }
+    return classicEnabledClasses.includes(cls)
+  })
   const [classicStepIndex, setClassicStepIndex] = useState(0)
   const advanceClassic = () => setClassicStepIndex(prev => Math.min(prev + 1, classicStepsOrdered.length))
 
   const renderClassicStep = () => {
     const currentClass = classicStepsOrdered[classicStepIndex]
-    if (!currentClass) {
-      return (
-        <div className="text-center space-y-4">
-          <button onClick={handleComplete} className="btn-primary">Continuar</button>
-        </div>
-      )
-    }
+    if (!currentClass) { return null }
 
-    const actors = alivePlayers.filter(p => (p.originalCharacter || p.character) === currentClass)
-
-    // Lobisomens (grupo)
+    // Lobisomens (grupo) - incluir TODOS os lobisomens vivos
     if (currentClass === CharacterClass.LOBISOMEM) {
-      if (actors.length === 0) {
+      // Usar p.character porque quando Occult copia, seu character muda para a classe copiada
+      const allWerewolves = alivePlayers.filter(p => isWerewolf(p.character))
+      
+      if (allWerewolves.length === 0) {
         return <FakeWerewolvesScreen onComplete={advanceClassic} />
       }
       return (
@@ -1382,7 +1405,7 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
           <div className="text-center">
             <h3 className="text-xl font-semibold mb-2">🐺 Lobisomens</h3>
             <p className="text-dark-300 mb-4">Escolham quem será devorado esta noite.</p>
-            <div className="text-sm text-dark-400">Lobisomens: {actors.map(w => w.name).join(', ')}</div>
+            <div className="text-sm text-dark-400">Lobisomens: {allWerewolves.map(w => w.name).join(', ')}</div>
           </div>
           <div className="grid grid-cols-3 gap-3">
             {alivePlayers.filter(p => !isWerewolf(p.character)).map(player => (
@@ -1393,19 +1416,23 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
             ))}
           </div>
           <div className="text-center">
-            <button onClick={() => { if (!selectedTarget) return; actors.forEach(w => addAction(w.id, ActionType.KILL, selectedTarget)); setSelectedTarget(''); advanceClassic() }}
+            <button onClick={() => { if (!selectedTarget) return; allWerewolves.forEach(w => addAction(w.id, ActionType.KILL, selectedTarget)); setSelectedTarget(''); advanceClassic() }}
               disabled={!selectedTarget} className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">✅ Confirmar</button>
           </div>
         </div>
       )
     }
 
+    // Para detectar jogadores da classe atual:
+    // - Jogador normal: character === currentClass
+    // - Occult que copiou: character === currentClass (quando copia, character muda para a classe copiada)
+    // Sempre usar p.character porque quando Occult copia, seu character é alterado para a classe copiada
+    const actors = alivePlayers.filter(p => p.character === currentClass)
+
     // Lobisomem Voodoo
     if (currentClass === CharacterClass.LOBISOMEM_VOODOO) {
       const actor = actors[0]
-      if (!actor) {
-        return <FakeWerewolvesScreen onComplete={advanceClassic} />
-      }
+      if (!actor) { return <FakeVoodooWerewolfScreen onComplete={advanceClassic} /> }
       return (
         <VoodooWerewolfInterface
           voodooWerewolf={actor}
@@ -1433,7 +1460,17 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
     // Vidente
     if (currentClass === CharacterClass.VIDENTE) {
       const actor = actors[0]
-      if (!actor) { return <FakeWerewolvesScreen onComplete={advanceClassic} /> }
+      if (!actor) {
+        return (
+          <div className="space-y-6 text-center">
+            <h3 className="text-xl font-semibold mb-2">{CHARACTER_NAMES[CharacterClass.VIDENTE]}</h3>
+            <div className="bg-dark-700 rounded-lg p-4">
+              <p className="text-dark-300">Nenhum jogador desta classe está vivo.</p>
+            </div>
+            <button onClick={advanceClassic} className="btn-primary">Continuar</button>
+          </div>
+        )
+      }
       return (
         <VidenteInterface
           vidente={actor}
@@ -1447,14 +1484,35 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
     // Médium
     if (currentClass === CharacterClass.MEDIUM) {
       const actor = actors[0]
-      if (!actor) { return <FakeWerewolvesScreen onComplete={advanceClassic} /> }
+      if (!actor) {
+        return (
+          <div className="space-y-6 text-center">
+            <h3 className="text-xl font-semibold mb-2">{CHARACTER_NAMES[CharacterClass.MEDIUM]}</h3>
+            <div className="bg-dark-700 rounded-lg p-4">
+              <p className="text-dark-300">Nenhum jogador desta classe está vivo.</p>
+            </div>
+            <button onClick={advanceClassic} className="btn-primary">Continuar</button>
+          </div>
+        )
+      }
       return (
         <MediumInterface
           medium={actor}
           allPlayers={players}
           usedAbilities={usedAbilities}
           silencedThisNight={silencedThisNight}
-          onMediumAction={(useAbility, targetId) => { if (useAbility && targetId) { addAction(actor.id, ActionType.INVESTIGATE, targetId) } setSelectedTarget(''); advanceClassic() }}
+          onMediumAction={(useAbility, targetId) => {
+            if (useAbility && targetId) {
+              addAction(actor.id, ActionType.INVESTIGATE, targetId)
+              // Marcar habilidade de médium como usada (uma vez por partida)
+              setUsedAbilities(prev => ({
+                ...prev,
+                [actor.id]: [...(prev[actor.id] || []), 'medium_investigation']
+              }))
+            }
+            setSelectedTarget('');
+            advanceClassic()
+          }}
         />
       )
     }
@@ -1476,7 +1534,7 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
       return <FakeWitchScreen onComplete={advanceClassic} />
     }
 
-    // Genéricos: Guardião, Hemomante, Vampiro, Zumbi, Herói
+    // Genéricos: Guardião, Hemomante, Vampiro, Zumbi, Herói (usar a mesma UI do modo sapatinho)
     const actionTypeMap: Partial<Record<CharacterClass, ActionType>> = {
       [CharacterClass.GUARDIAO]: ActionType.PROTECT,
       [CharacterClass.HEMOMANTE]: ActionType.BLOOD_BOND,
@@ -1500,25 +1558,65 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
       )
     }
 
-    // Seleção genérica
+    const canSkip = !(currentClass === CharacterClass.VAMPIRO || currentClass === CharacterClass.ZUMBI)
+    const getDescForActor = () => {
+      const c = actor.originalCharacter || actor.character
+      switch (c) {
+        case CharacterClass.VIDENTE: return 'ver a índole de um jogador'
+        case CharacterClass.GUARDIAO: return 'proteger um jogador'
+        case CharacterClass.VAMPIRO: return 'matar um jogador'
+        case CharacterClass.ZUMBI: return 'infectar um jogador'
+        case CharacterClass.MEDIUM: return 'ver a classe de um jogador morto'
+        case CharacterClass.HEMOMANTE: return 'fazer ligação de sangue'
+        case CharacterClass.HEROI: return 'matar um jogador (cuidado!)'
+        default: return 'fazer uma ação'
+      }
+    }
+
     return (
       <div className="space-y-6">
         <div className="text-center">
           <h3 className="text-xl font-semibold mb-2">{CHARACTER_NAMES[currentClass]} - {actor.name}</h3>
-          <p className="text-dark-300 mb-4">Escolha um jogador alvo.</p>
+          <p className="text-dark-300 mb-4">Escolha um jogador para {getDescForActor()} </p>
+          <div className="text-sm text-primary-400">👥 {alivePlayers.length} vivos</div>
         </div>
+
+        {(actor.isSilenced || actor.id === silencedThisNight) && (
+          <div className="bg-yellow-900/30 border border-yellow-700 text-yellow-100 p-4 rounded-lg text-center">
+            🤐 Você foi silenciado e não pode falar no próximo dia!
+          </div>
+        )}
+
         <div className="grid grid-cols-3 gap-3">
-          {alivePlayers.filter(p => p.id !== actor.id).map(player => (
-            <button key={player.id} onClick={() => setSelectedTarget(player.id)}
-              className={`px-4 py-2 rounded-lg border transition-all ${selectedTarget === player.id ? 'bg-primary-600 border-primary-500' : 'bg-dark-700 border-dark-600 hover:bg-dark-600'}`}>
-              <div className="font-medium">{player.name}</div>
-            </button>
-          ))}
+          {alivePlayers
+            .filter(p => p.id !== actor.id)
+            .map(player => (
+              <button
+                key={player.id}
+                onClick={() => setSelectedTarget(player.id)}
+                className={`px-4 py-2 rounded-lg border transition-all ${selectedTarget === player.id ? 'bg-primary-600 border-primary-500' : 'bg-dark-700 border-dark-600 hover:bg-dark-600'}`}
+              >
+                <div className="font-medium">{player.name}</div>
+              </button>
+            ))}
         </div>
-        <div className="text-center">
-          <button onClick={() => { if (!selectedTarget) return; addAction(actor.id, actionType, selectedTarget); setSelectedTarget(''); advanceClassic() }}
+
+        <div className={canSkip ? "grid grid-cols-2 gap-3 justify-items-center w-full" : "w-full flex justify-center"}>
+          <button
+            onClick={() => { if (!selectedTarget) return; addAction(actor.id, actionType, selectedTarget); setSelectedTarget(''); advanceClassic() }}
             disabled={!selectedTarget}
-            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">✅ Confirmar</button>
+            className={canSkip ? "btn-primary disabled:opacity-50 disabled:cursor-not-allowed w-full max-w-[180px] px-4 py-2" : "btn-primary disabled:opacity-50 disabled:cursor-not-allowed w-full px-4 py-2"}
+          >
+            ✅ Confirmar
+          </button>
+          {canSkip && (
+            <button
+              onClick={() => { setSelectedTarget(''); advanceClassic() }}
+              className="btn-secondary w-full max-w-[180px] px-4 py-2"
+            >
+              ⏭️ Pular
+            </button>
+          )}
         </div>
       </div>
     )
