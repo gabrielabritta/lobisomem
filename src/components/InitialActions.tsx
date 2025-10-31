@@ -15,16 +15,17 @@ export default function InitialActions({ players, onActionsComplete }: InitialAc
   )
   
   // Determinar a ação inicial baseada nos jogadores disponíveis
-  const getInitialAction = (): 'occult' | 'cupid' | 'complete' => {
+  const getInitialAction = (): 'occult' | 'occult_confirmation' | 'cupid' | 'complete' => {
     if (occultPlayer) return 'occult'
     if (cupidPlayer) return 'cupid'
     return 'complete'
   }
   
-  const [currentAction, setCurrentAction] = useState<'occult' | 'cupid' | 'complete'>(getInitialAction())
+  const [currentAction, setCurrentAction] = useState<'occult' | 'occult_confirmation' | 'cupid' | 'complete'>(getInitialAction())
   const [selectedTarget, setSelectedTarget] = useState<string>('')
   const [selectedLovers, setSelectedLovers] = useState<string[]>([])
   const [updatedPlayers, setUpdatedPlayers] = useState<Player[]>(players)
+  const [copiedClass, setCopiedClass] = useState<CharacterClass | null>(null)
 
   const handleOccultAction = () => {
     if (!occultPlayer || !selectedTarget) return
@@ -48,7 +49,40 @@ export default function InitialActions({ players, onActionsComplete }: InitialAc
     })
 
     setUpdatedPlayers(newPlayers)
+    setCopiedClass(targetPlayer.character)
+    setCurrentAction('occult_confirmation')
+  }
+
+  const handleOccultConfirmationContinue = () => {
     setCurrentAction(cupidPlayer ? 'cupid' : 'complete')
+  }
+
+  // Função para obter ícone da classe
+  const getCharacterIcon = (cls: CharacterClass): string => {
+    const iconMap: Record<CharacterClass, string> = {
+      // Good classes
+      [CharacterClass.ALDEAO]: '👨‍🌾',
+      [CharacterClass.MEDIUM]: '👻',
+      [CharacterClass.VIDENTE]: '🔮',
+      [CharacterClass.CUPIDO]: '💘',
+      [CharacterClass.TALISMA]: '🛡️',
+      [CharacterClass.BRUXA]: '🧪',
+      [CharacterClass.BALA_DE_PRATA]: '⚪',
+      [CharacterClass.GUARDIAO]: '🛡️',
+      [CharacterClass.HEMOMANTE]: '🩸',
+      [CharacterClass.HEROI]: '⚔️',
+      // Evil classes
+      [CharacterClass.BOBO]: '🎭',
+      [CharacterClass.TRAIDOR]: '🗡️',
+      [CharacterClass.ZUMBI]: '🧟',
+      [CharacterClass.VAMPIRO]: '🧛',
+      [CharacterClass.LOBISOMEM]: '🐺',
+      [CharacterClass.LOBISOMEM_VOODOO]: '🎯',
+      [CharacterClass.LOBISOMEM_MORDACA]: '🔇',
+      // Neutral classes
+      [CharacterClass.OCCULT]: '❓'
+    }
+    return iconMap[cls] || '❓'
   }
 
   const handleCupidAction = () => {
@@ -95,6 +129,41 @@ export default function InitialActions({ players, onActionsComplete }: InitialAc
     <div className="max-w-3xl mx-auto">
       <div className="card">
         <h2 className="text-2xl font-bold mb-6 text-center">Ações Iniciais</h2>
+
+        {currentAction === 'occult_confirmation' && occultPlayer && copiedClass && (
+          <div className="space-y-6">
+            <div className="text-center">
+              <h3 className="text-xl font-semibold mb-4">
+                🎭 {occultPlayer.name} - Occult
+              </h3>
+              <p className="text-dark-300 mb-6">
+                Você copiou a classe:
+              </p>
+              
+              <div className="bg-purple-900/30 border-2 border-purple-700 rounded-lg p-8 my-8">
+                <div className="text-6xl mb-4">
+                  {getCharacterIcon(copiedClass)}
+                </div>
+                <div className="text-4xl md:text-5xl font-bold text-purple-100">
+                  {CHARACTER_NAMES[copiedClass]}
+                </div>
+              </div>
+              
+              <p className="text-dark-300 mb-6">
+                Você assumirá este papel pelo resto da partida.
+              </p>
+            </div>
+
+            <div className="text-center">
+              <button
+                onClick={handleOccultConfirmationContinue}
+                className="btn-primary text-lg"
+              >
+                Continuar
+              </button>
+            </div>
+          </div>
+        )}
 
         {currentAction === 'occult' && occultPlayer && (
           <div className="space-y-6">
