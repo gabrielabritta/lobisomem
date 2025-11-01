@@ -309,6 +309,7 @@ export default function Game({ gameState, onGameReset }: GameProps) {
       {currentGameState.currentPhase === GamePhase.SETUP && (
         <InitialActions
           players={currentGameState.players}
+          gameMode={currentGameState.config.gameMode}
           onActionsComplete={handleInitialActionsComplete}
         />
       )}

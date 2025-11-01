@@ -11,6 +11,34 @@ import {
   WEREWOLF_CLASSES
 } from '../types/game';
 
+// Função para obter o emoji de uma classe
+export function getCharacterIcon(character: CharacterClass): string {
+  const iconMap: Record<CharacterClass, string> = {
+    // Good classes
+    [CharacterClass.ALDEAO]: '👨‍🌾',
+    [CharacterClass.MEDIUM]: '👻',
+    [CharacterClass.VIDENTE]: '🔮',
+    [CharacterClass.CUPIDO]: '💘',
+    [CharacterClass.TALISMA]: '🛡️',
+    [CharacterClass.BRUXA]: '🧙‍♀️',
+    [CharacterClass.BALA_DE_PRATA]: '🔫',
+    [CharacterClass.GUARDIAO]: '🛡️',
+    [CharacterClass.HEMOMANTE]: '🩸',
+    [CharacterClass.HEROI]: '⚔️',
+    // Evil classes
+    [CharacterClass.BOBO]: '🎭',
+    [CharacterClass.TRAIDOR]: '🗡️',
+    [CharacterClass.ZUMBI]: '🧟',
+    [CharacterClass.VAMPIRO]: '🧛',
+    [CharacterClass.LOBISOMEM]: '🐺',
+    [CharacterClass.LOBISOMEM_VOODOO]: '🎯',
+    [CharacterClass.LOBISOMEM_MORDACA]: '🔇',
+    // Neutral classes
+    [CharacterClass.OCCULT]: '❓'
+  }
+  return iconMap[character] || '❓'
+}
+
 // Função para determinar o time de uma classe
 export function getCharacterTeam(character: CharacterClass): Team {
   if (GOOD_CLASSES.includes(character)) {

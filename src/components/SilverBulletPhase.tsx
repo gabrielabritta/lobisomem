@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Player, GameConfig } from '../types/game'
 import { CharacterClass, CHARACTER_NAMES } from '../types/game'
+import { getCharacterIcon } from '../utils/gameUtils'
 
 interface SilverBulletPhaseProps {
   silverBulletPlayer: Player
@@ -56,7 +57,7 @@ export default function SilverBulletPhase({
         <div className="text-center mb-6">
           <div className="text-6xl mb-4">{getTriggerEmoji()}</div>
           <h2 className="text-2xl font-bold mb-4">
-            🔫 Bala de Prata - Último Tiro
+            {getCharacterIcon(CharacterClass.BALA_DE_PRATA)} Bala de Prata - Último Tiro
           </h2>
           <div className="bg-red-900/30 border border-red-700 rounded-lg p-4 mb-6">
             <p className="text-lg text-red-300">
@@ -109,7 +110,7 @@ export default function SilverBulletPhase({
                 disabled={!selectedTarget}
                 className="btn-primary bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                🔫 Atirar em {selectedTarget ? availableTargets.find(p => p.id === selectedTarget)?.name : '...'}
+                {getCharacterIcon(CharacterClass.BALA_DE_PRATA)} Atirar em {selectedTarget ? availableTargets.find(p => p.id === selectedTarget)?.name : '...'}
               </button>
             </div>
           </div>

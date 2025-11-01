@@ -1,12 +1,15 @@
 import { useState } from 'react'
-import { Player, CharacterClass, CHARACTER_NAMES } from '../types/game'
+import type { Player } from '../types/game'
+import { CharacterClass, CHARACTER_NAMES } from '../types/game'
+import { getCharacterIcon } from '../utils/gameUtils'
 
 interface InitialActionsProps {
   players: Player[]
+  gameMode?: 'classic' | 'sapatinho'
   onActionsComplete: (updatedPlayers: Player[]) => void
 }
 
-export default function InitialActions({ players, onActionsComplete }: InitialActionsProps) {
+export default function InitialActions({ players, gameMode, onActionsComplete }: InitialActionsProps) {
   const [occultPlayer, setOccultPlayer] = useState<Player | null>(
     players.find(p => p.character === CharacterClass.OCCULT) || null
   )
@@ -26,6 +29,7 @@ export default function InitialActions({ players, onActionsComplete }: InitialAc
   const [selectedLovers, setSelectedLovers] = useState<string[]>([])
   const [updatedPlayers, setUpdatedPlayers] = useState<Player[]>(players)
   const [copiedClass, setCopiedClass] = useState<CharacterClass | null>(null)
+  const [copiedPlayerId, setCopiedPlayerId] = useState<string | null>(null)
 
   const handleOccultAction = () => {
     if (!occultPlayer || !selectedTarget) return
@@ -50,39 +54,12 @@ export default function InitialActions({ players, onActionsComplete }: InitialAc
 
     setUpdatedPlayers(newPlayers)
     setCopiedClass(targetPlayer.character)
+    setCopiedPlayerId(selectedTarget)
     setCurrentAction('occult_confirmation')
   }
 
   const handleOccultConfirmationContinue = () => {
     setCurrentAction(cupidPlayer ? 'cupid' : 'complete')
-  }
-
-  // Função para obter ícone da classe
-  const getCharacterIcon = (cls: CharacterClass): string => {
-    const iconMap: Record<CharacterClass, string> = {
-      // Good classes
-      [CharacterClass.ALDEAO]: '👨‍🌾',
-      [CharacterClass.MEDIUM]: '👻',
-      [CharacterClass.VIDENTE]: '🔮',
-      [CharacterClass.CUPIDO]: '💘',
-      [CharacterClass.TALISMA]: '🛡️',
-      [CharacterClass.BRUXA]: '🧪',
-      [CharacterClass.BALA_DE_PRATA]: '⚪',
-      [CharacterClass.GUARDIAO]: '🛡️',
-      [CharacterClass.HEMOMANTE]: '🩸',
-      [CharacterClass.HEROI]: '⚔️',
-      // Evil classes
-      [CharacterClass.BOBO]: '🎭',
-      [CharacterClass.TRAIDOR]: '🗡️',
-      [CharacterClass.ZUMBI]: '🧟',
-      [CharacterClass.VAMPIRO]: '🧛',
-      [CharacterClass.LOBISOMEM]: '🐺',
-      [CharacterClass.LOBISOMEM_VOODOO]: '🎯',
-      [CharacterClass.LOBISOMEM_MORDACA]: '🔇',
-      // Neutral classes
-      [CharacterClass.OCCULT]: '❓'
-    }
-    return iconMap[cls] || '❓'
   }
 
   const handleCupidAction = () => {
@@ -134,7 +111,7 @@ export default function InitialActions({ players, onActionsComplete }: InitialAc
           <div className="space-y-6">
             <div className="text-center">
               <h3 className="text-xl font-semibold mb-4">
-                🎭 {occultPlayer.name} - Occult
+                {getCharacterIcon(CharacterClass.OCCULT)} {occultPlayer.name} - Occult
               </h3>
               <p className="text-dark-300 mb-6">
                 Você copiou a classe:
@@ -152,6 +129,18 @@ export default function InitialActions({ players, onActionsComplete }: InitialAc
               <p className="text-dark-300 mb-6">
                 Você assumirá este papel pelo resto da partida.
               </p>
+              
+              {gameMode === 'classic' && copiedPlayerId && (
+                <div className="bg-blue-900/30 border border-blue-700 rounded-lg p-4 mt-6">
+                  <p className="text-blue-200 text-sm md:text-base">
+                    <span className="font-semibold">⚠️ Instrução para o Mestre:</span>
+                    <br />
+                    Toque discretamente <span className="font-bold text-blue-100">
+                      {players.find(p => p.id === copiedPlayerId)?.name}
+                    </span> para que ele saiba que foi copiado.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="text-center">
@@ -169,7 +158,7 @@ export default function InitialActions({ players, onActionsComplete }: InitialAc
           <div className="space-y-6">
             <div className="text-center">
               <h3 className="text-xl font-semibold mb-2">
-                🎭 {occultPlayer.name} - Occult
+                {getCharacterIcon(CharacterClass.OCCULT)} {occultPlayer.name} - Occult
               </h3>
               <p className="text-dark-300 mb-6">
                 Escolha um jogador para copiar sua classe. Você assumirá o mesmo papel pelo resto da partida.

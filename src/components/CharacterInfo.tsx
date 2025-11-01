@@ -1,4 +1,5 @@
 import { CharacterClass, CHARACTER_NAMES, CHARACTER_DESCRIPTIONS, Team } from '../types/game'
+import { getCharacterIcon } from '../utils/gameUtils'
 
 interface CharacterInfoProps {
   onClose: () => void
@@ -19,34 +20,6 @@ export default function CharacterInfo({ onClose }: CharacterInfoProps) {
   const neutralClasses = Object.values(CharacterClass).filter(cls =>
     cls === CharacterClass.OCCULT
   )
-
-  // Map specific icons for each character class
-  const getCharacterIcon = (cls: CharacterClass): string => {
-    const iconMap: Record<CharacterClass, string> = {
-      // Good classes
-      [CharacterClass.ALDEAO]: '👨‍🌾',
-      [CharacterClass.MEDIUM]: '👻',
-      [CharacterClass.VIDENTE]: '🔮',
-      [CharacterClass.CUPIDO]: '💘',
-      [CharacterClass.TALISMA]: '🛡️',
-      [CharacterClass.BRUXA]: '🧪',
-      [CharacterClass.BALA_DE_PRATA]: '⚪',
-      [CharacterClass.GUARDIAO]: '🛡️',
-      [CharacterClass.HEMOMANTE]: '🩸',
-      [CharacterClass.HEROI]: '⚔️',
-      // Evil classes
-      [CharacterClass.BOBO]: '🎭',
-      [CharacterClass.TRAIDOR]: '🗡️',
-      [CharacterClass.ZUMBI]: '🧟',
-      [CharacterClass.VAMPIRO]: '🧛',
-      [CharacterClass.LOBISOMEM]: '🐺',
-      [CharacterClass.LOBISOMEM_VOODOO]: '🎯',
-      [CharacterClass.LOBISOMEM_MORDACA]: '🔇',
-      // Neutral classes
-      [CharacterClass.OCCULT]: '❓'
-    }
-    return iconMap[cls] || '❓'
-  }
 
   const getTeamColor = (team: Team) => {
     switch (team) {

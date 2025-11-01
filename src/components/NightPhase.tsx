@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { Player, GameAction, GameState, WitchPotions } from '../types/game'
 import { ActionType, CharacterClass, CHARACTER_NAMES } from '../types/game'
-import { isWerewolf } from '../utils/gameUtils'
+import { isWerewolf, getCharacterIcon } from '../utils/gameUtils'
 import PassDeviceScreen from './PassDeviceScreen'
 import MasterPassScreen from './MasterPassScreen'
 
@@ -378,7 +378,7 @@ function MediumInterface({ medium, allPlayers, usedAbilities, silencedThisNight,
       <div className="space-y-6">
         <div className="text-center">
           <h3 className="text-xl font-semibold mb-2">
-            🔮 {medium.name} - Médium
+            {getCharacterIcon(CharacterClass.MEDIUM)} {medium.name} - Médium
           </h3>
           <p className="text-dark-300 mb-4">
             Resultado da sua investigação:
@@ -414,7 +414,7 @@ function MediumInterface({ medium, allPlayers, usedAbilities, silencedThisNight,
       <div className="space-y-6">
         <div className="text-center">
           <h3 className="text-xl font-semibold mb-2">
-            🔮 {medium.name} - Médium
+            {getCharacterIcon(CharacterClass.MEDIUM)} {medium.name} - Médium
           </h3>
           
           {(medium.isSilenced || medium.id === silencedThisNight) && (
@@ -463,7 +463,7 @@ function MediumInterface({ medium, allPlayers, usedAbilities, silencedThisNight,
               onClick={() => setShowTargetSelection(true)}
               className="btn-primary bg-blue-600 hover:bg-blue-700"
             >
-              🔮 Usar Habilidade do Médium
+              {getCharacterIcon(CharacterClass.MEDIUM)} Usar Habilidade do Médium
             </button>
           )}
         </div>
@@ -527,7 +527,7 @@ function MediumInterface({ medium, allPlayers, usedAbilities, silencedThisNight,
           disabled={!selectedTarget}
           className="btn-primary bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          🔮 Investigar Morto
+          {getCharacterIcon(CharacterClass.MEDIUM)} Investigar Morto
         </button>
       </div>
     </div>
@@ -575,7 +575,7 @@ function VidenteInterface({ vidente, alivePlayers, silencedThisNight, onVidenteA
       <div className="space-y-6">
         <div className="text-center">
           <h3 className="text-xl font-semibold mb-2">
-            👁️ {vidente.name} - Vidente
+            {getCharacterIcon(CharacterClass.VIDENTE)} {vidente.name} - Vidente
           </h3>
           <p className="text-dark-300 mb-4">
             Resultado da sua investigação:
@@ -585,7 +585,7 @@ function VidenteInterface({ vidente, alivePlayers, silencedThisNight, onVidenteA
         {/* Resultado da investigação */}
         <div className="bg-purple-900/30 border border-purple-700 rounded-lg p-6">
           <div className="text-center">
-            <div className="text-4xl mb-4">👁️</div>
+            <div className="text-4xl mb-4">{getCharacterIcon(CharacterClass.VIDENTE)}</div>
             <h4 className="text-xl font-bold text-purple-300 mb-2">Visão Revelada!</h4>
             <p className="text-lg text-purple-200">
               {investigationResult}
@@ -653,7 +653,7 @@ function VidenteInterface({ vidente, alivePlayers, silencedThisNight, onVidenteA
           disabled={!selectedTarget}
           className="btn-primary bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          👁️ Investigar Jogador
+          {getCharacterIcon(CharacterClass.VIDENTE)} Investigar Jogador
         </button>
       </div>
     </div>
@@ -888,7 +888,7 @@ function VoodooWerewolfInterface({ voodooWerewolf, players, silencedThisNight, o
       {/* Seleção de classe */}
       {selectedTarget && (
         <div className="space-y-4">
-          <h4 className="font-semibold text-center">🔮 Qual é a classe de {players.find(p => p.id === selectedTarget)?.name}?</h4>
+          <h4 className="font-semibold text-center">{getCharacterIcon(CharacterClass.VIDENTE)} Qual é a classe de {players.find(p => p.id === selectedTarget)?.name}?</h4>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {allClasses.map(characterClass => (
               <button
@@ -1862,7 +1862,7 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
                           {currentPlayer.character === CharacterClass.VAMPIRO && (
                             <div className="bg-red-900/30 border border-red-700 rounded-lg p-3 mt-2">
                               <p className="text-sm text-red-300">
-                                🧛‍♂️ Você é o Vampiro! Escolha alguém para matar esta noite.
+                                {getCharacterIcon(CharacterClass.VAMPIRO)} Você é o Vampiro! Escolha alguém para matar esta noite.
                               </p>
                             </div>
                           )}
@@ -2134,7 +2134,7 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
                     }`}>
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-lg">
-                          {result.type === 'vidente' ? '👁️' : '🔮'}
+                          {result.type === 'vidente' ? getCharacterIcon(CharacterClass.VIDENTE) : getCharacterIcon(CharacterClass.MEDIUM)}
                         </span>
                         <span className="font-semibold">
                           {investigator?.name} - {result.type === 'vidente' ? 'Vidente' : 'Médium'}

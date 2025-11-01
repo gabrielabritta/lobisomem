@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Player, CharacterClass, CHARACTER_NAMES, CHARACTER_DESCRIPTIONS } from '../types/game'
+import { getCharacterIcon } from '../utils/gameUtils'
 
 interface CharacterDistributionProps {
   players: Player[]
@@ -27,30 +28,6 @@ export default function CharacterDistribution({ players, onDistributionComplete 
       setShowCharacter(false)
       setHasSeenCharacter(false)
     }
-  }
-
-  const getCharacterEmoji = (character: CharacterClass): string => {
-    const emojiMap: { [key in CharacterClass]: string } = {
-      [CharacterClass.ALDEAO]: '👨‍🌾',
-      [CharacterClass.MEDIUM]: '🔮',
-      [CharacterClass.VIDENTE]: '👁️',
-      [CharacterClass.CUPIDO]: '💘',
-      [CharacterClass.TALISMA]: '🛡️',
-      [CharacterClass.OCCULT]: '🎭',
-      [CharacterClass.BRUXA]: '🧙‍♀️',
-      [CharacterClass.BALA_DE_PRATA]: '🔫',
-      [CharacterClass.GUARDIAO]: '🛡️',
-      [CharacterClass.HEMOMANTE]: '🩸',
-      [CharacterClass.HEROI]: '⚔️',
-      [CharacterClass.BOBO]: '🤡',
-      [CharacterClass.TRAIDOR]: '🗡️',
-      [CharacterClass.ZUMBI]: '🧟',
-      [CharacterClass.VAMPIRO]: '🧛',
-      [CharacterClass.LOBISOMEM]: '🐺',
-      [CharacterClass.LOBISOMEM_VOODOO]: '🐺',
-      [CharacterClass.LOBISOMEM_MORDACA]: '🐺'
-    }
-    return emojiMap[character] || '❓'
   }
 
   const getCharacterColor = (character: CharacterClass): string => {
@@ -117,7 +94,7 @@ export default function CharacterDistribution({ players, onDistributionComplete 
             <div className="space-y-6">
               <div className={`bg-gradient-to-r ${getCharacterColor(currentPlayer.character)} rounded-xl p-8 text-white shadow-2xl`}>
                 <div className="text-6xl mb-4">
-                  {getCharacterEmoji(currentPlayer.character)}
+                  {getCharacterIcon(currentPlayer.character)}
                 </div>
                 <h3 className="text-3xl font-bold mb-2">
                   {CHARACTER_NAMES[currentPlayer.character]}
