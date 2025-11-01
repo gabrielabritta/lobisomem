@@ -798,7 +798,7 @@ function VoodooWerewolfInterface({ voodooWerewolf, players, silencedThisNight, o
   const [selectedClass, setSelectedClass] = useState<CharacterClass | null>(null)
   const [showTargetSelection, setShowTargetSelection] = useState(false)
 
-  const availableTargets = players.filter(p => p.id !== voodooWerewolf.id && !isWerewolf(p.character))
+  const availableTargets = players.filter(p => p.id !== voodooWerewolf.id)
   
   const allClasses = Object.values(CharacterClass)
 
