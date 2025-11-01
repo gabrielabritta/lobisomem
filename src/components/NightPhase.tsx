@@ -1352,6 +1352,20 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
     }
   }
 
+  // Helper function to get who the guardian protected last night
+  const getGuardianLastNightTarget = (guardianId: string, currentNight: number): string | null => {
+    if (!gameState?.actions || currentNight <= 1) return null
+    
+    const lastNightAction = gameState.actions.find(
+      action => 
+        action.playerId === guardianId &&
+        action.type === ActionType.PROTECT &&
+        action.night === currentNight - 1
+    )
+    
+    return lastNightAction?.targetId || null
+  }
+
   // Determinar se deve mostrar o cabeçalho
   const isClassicMode = gameState?.config.gameMode === 'classic'
   const shouldShowHeader = isClassicMode || currentStep === 'werewolves' || currentStep === 'witch' || currentStep === 'complete'
@@ -1589,7 +1603,19 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
 
         <div className="grid grid-cols-3 gap-3">
           {alivePlayers
-            .filter(p => p.id !== actor.id)
+            .filter(p => {
+              // Guardião pode se proteger (não filtrar p.id !== actor.id)
+              if (currentClass === CharacterClass.GUARDIAO) {
+                // Filtrar quem foi protegido na noite anterior
+                const lastNightTarget = getGuardianLastNightTarget(actor.id, nightNumber)
+                if (lastNightTarget && p.id === lastNightTarget) return false
+                
+                return true // Guardião pode proteger a si mesmo e qualquer outro (exceto protegido na noite anterior)
+              }
+              
+              // Para outras classes: não pode ser o próprio jogador
+              return p.id !== actor.id
+            })
             .map(player => (
               <button
                 key={player.id}
@@ -1877,11 +1903,21 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
                         <div className="grid grid-cols-3 gap-3">
                           {alivePlayers
                             .filter(p => {
-                              // Filtro básico: não pode ser o próprio jogador
+                              const character = currentPlayer.originalCharacter || currentPlayer.character
+                              
+                              // Guardião pode se proteger (remover filtro de exclusão do próprio jogador)
+                              if (character === CharacterClass.GUARDIAO) {
+                                // Filtrar quem foi protegido na noite anterior
+                                const lastNightTarget = getGuardianLastNightTarget(currentPlayer.id, nightNumber)
+                                if (lastNightTarget && p.id === lastNightTarget) return false
+                                
+                                return true // Guardião pode proteger a si mesmo e qualquer outro (exceto protegido na noite anterior)
+                              }
+                              
+                              // Para outras classes: não pode ser o próprio jogador
                               if (p.id === currentPlayer.id) return false
                               
                               // Se for zumbi, não pode infectar jogadores já infectados
-                              const character = currentPlayer.originalCharacter || currentPlayer.character
                               if (character === CharacterClass.ZUMBI && p.isInfected) return false
                               
                               return true
