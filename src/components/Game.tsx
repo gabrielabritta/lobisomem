@@ -9,7 +9,7 @@ import DayPhase from './DayPhase'
 import SilverBulletPhase from './SilverBulletPhase'
 import GameStatusModal from './GameStatusModal'
 import { resolveNightActions, processSilverBulletShot } from '../utils/actionResolver'
-import { checkVictoryConditions, applyLoveDeath, applyBloodBondDeath } from '../utils/gameUtils'
+import { checkVictoryConditions, applyLoveDeath, applyBloodBondDeath, getCharacterTeam } from '../utils/gameUtils'
 
 interface GameProps {
   gameState: GameState
@@ -25,6 +25,24 @@ export default function Game({ gameState, onGameReset }: GameProps) {
     deathReasons: { [playerId: string]: string }
   }>({ deadPlayers: [], messages: [], investigations: {}, deathReasons: {} })
   const [showGameStatus, setShowGameStatus] = useState(false)
+
+  const handlePlayerCharacterUpdate = (playerId: string, character: CharacterClass) => {
+    setCurrentGameState(prev => ({
+      ...prev,
+      players: prev.players.map(player => {
+        if (player.id === playerId) {
+          return {
+            ...player,
+            character,
+            team: getCharacterTeam(character),
+            hasProtection: character === CharacterClass.TALISMA,
+            isInfected: character === CharacterClass.ZUMBI
+          }
+        }
+        return player
+      })
+    }))
+  }
 
   const handleDistributionComplete = () => {
     // Modo debug apenas pula a revelação das classes, mas mantém as ações iniciais
@@ -302,6 +320,8 @@ export default function Game({ gameState, onGameReset }: GameProps) {
       {currentGameState.currentPhase === GamePhase.CHARACTER_DISTRIBUTION && (
         <CharacterDistribution
           players={currentGameState.players}
+          config={currentGameState.config}
+          onPlayerCharacterUpdate={handlePlayerCharacterUpdate}
           onDistributionComplete={handleDistributionComplete}
         />
       )}

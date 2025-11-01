@@ -55,6 +55,30 @@ export function isWerewolf(character: CharacterClass): boolean {
   return WEREWOLF_CLASSES.includes(character);
 }
 
+// Função para criar jogadores sem classes atribuídas (modo cartas físicas)
+export function createPlayersWithoutClasses(
+  playerNames: string[],
+  config: GameConfig
+): Player[] {
+  const players: Player[] = [];
+  
+  for (let i = 0; i < playerNames.length; i++) {
+    players.push({
+      id: `player_${i + 1}`,
+      name: playerNames[i],
+      character: CharacterClass.ALDEAO, // Classe placeholder temporária
+      team: Team.GOOD, // Placeholder
+      isAlive: true,
+      isSilenced: false,
+      isInfected: false,
+      hasProtection: false,
+      isInLove: false
+    });
+  }
+
+  return players;
+}
+
 // Função para distribuir classes aleatoriamente
 export function distributeCharacters(
   playerNames: string[],
@@ -515,6 +539,7 @@ export function createDefaultConfig(): GameConfig {
     ],
     discussionTime: 2,
     gameMode: 'sapatinho',
+    distributionMethod: 'app',
     mayorVotingAnonymous: false,
     expulsionVotingAnonymous: false,
     allowNoExpulsionVote: true,

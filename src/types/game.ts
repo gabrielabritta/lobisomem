@@ -91,6 +91,7 @@ export interface GameConfig {
   allowedClasses: CharacterClass[];
   discussionTime: number; // em minutos
   gameMode?: 'classic' | 'sapatinho';
+  distributionMethod?: 'app' | 'cards';
   mayorVotingAnonymous: boolean;
   expulsionVotingAnonymous: boolean;
   allowNoExpulsionVote: boolean;

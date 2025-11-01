@@ -11,6 +11,7 @@ import {
 import { 
   createDefaultConfig, 
   distributeCharacters,
+  createPlayersWithoutClasses,
   loadConfigFromCache,
   loadPlayerNamesFromCache,
   saveConfigToCache,
@@ -144,7 +145,11 @@ export default function GameSetup({ onGameStart }: GameSetupProps) {
       return
     }
 
-    const players = distributeCharacters(playerNames, config)
+    // Se for modo cartas, criar jogadores sem classes atribuídas
+    // Se for modo app, distribuir classes automaticamente
+    const players = (config.distributionMethod || 'app') === 'cards'
+      ? createPlayersWithoutClasses(playerNames, config)
+      : distributeCharacters(playerNames, config)
 
     // Verificar se há jogadores que precisam de ações iniciais
     const needsInitialActions = players.some(p => 
@@ -271,6 +276,23 @@ export default function GameSetup({ onGameStart }: GameSetupProps) {
                 className={`px-3 py-2 rounded border ${config.gameMode === 'classic' ? 'bg-primary-600 border-primary-500' : 'bg-dark-700 border-dark-600 hover:bg-dark-600'}`}
               >
                 Modo Clássico
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Método de Distribuição</label>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setConfig(prev => ({ ...prev, distributionMethod: 'app' }))}
+                className={`px-3 py-2 rounded border ${(config.distributionMethod || 'app') === 'app' ? 'bg-primary-600 border-primary-500' : 'bg-dark-700 border-dark-600 hover:bg-dark-600'}`}
+              >
+                Sortear pelo App
+              </button>
+              <button
+                onClick={() => setConfig(prev => ({ ...prev, distributionMethod: 'cards' }))}
+                className={`px-3 py-2 rounded border ${config.distributionMethod === 'cards' ? 'bg-primary-600 border-primary-500' : 'bg-dark-700 border-dark-600 hover:bg-dark-600'}`}
+              >
+                Sortear por Cartas
               </button>
             </div>
           </div>

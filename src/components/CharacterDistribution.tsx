@@ -1,21 +1,35 @@
 import { useState } from 'react'
-import { Player, CharacterClass, CHARACTER_NAMES, CHARACTER_DESCRIPTIONS } from '../types/game'
-import { getCharacterIcon } from '../utils/gameUtils'
+import type { Player, GameConfig } from '../types/game'
+import { CharacterClass, CHARACTER_NAMES, CHARACTER_DESCRIPTIONS } from '../types/game'
+import { getCharacterIcon, getCharacterTeam } from '../utils/gameUtils'
 
 interface CharacterDistributionProps {
   players: Player[]
+  config?: GameConfig
+  onPlayerCharacterUpdate?: (playerId: string, character: CharacterClass) => void
   onDistributionComplete: () => void
 }
 
-export default function CharacterDistribution({ players, onDistributionComplete }: CharacterDistributionProps) {
+export default function CharacterDistribution({ players, config, onPlayerCharacterUpdate, onDistributionComplete }: CharacterDistributionProps) {
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0)
   const [showCharacter, setShowCharacter] = useState(false)
   const [hasSeenCharacter, setHasSeenCharacter] = useState(false)
+  const [selectedClass, setSelectedClass] = useState<CharacterClass | null>(null)
 
   const currentPlayer = players[currentPlayerIndex]
   const isLastPlayer = currentPlayerIndex === players.length - 1
+  const isCardsMode = config?.distributionMethod === 'cards'
 
   const handleRevealCharacter = () => {
+    setShowCharacter(true)
+    setHasSeenCharacter(true)
+  }
+
+  const handleClassSelection = (characterClass: CharacterClass) => {
+    setSelectedClass(characterClass)
+    if (onPlayerCharacterUpdate && currentPlayer) {
+      onPlayerCharacterUpdate(currentPlayer.id, characterClass)
+    }
     setShowCharacter(true)
     setHasSeenCharacter(true)
   }
@@ -27,6 +41,7 @@ export default function CharacterDistribution({ players, onDistributionComplete 
       setCurrentPlayerIndex(prev => prev + 1)
       setShowCharacter(false)
       setHasSeenCharacter(false)
+      setSelectedClass(null)
     }
   }
 
@@ -73,34 +88,61 @@ export default function CharacterDistribution({ players, onDistributionComplete 
               🎭 {currentPlayer.name}
             </h3>
             <p className="text-dark-300">
-              É a sua vez de descobrir sua classe!
+              {isCardsMode 
+                ? 'Selecione a classe que você tirou na carta física.'
+                : 'É a sua vez de descobrir sua classe!'}
             </p>
           </div>
 
           {!showCharacter ? (
-            <div>
-              <p className="text-dark-300 mb-6">
-                📱 Clique no botão abaixo para revelar sua classe.<br/>
-                ⚠️ Mantenha em segredo dos outros jogadores!
-              </p>
-              <button
-                onClick={handleRevealCharacter}
-                className="btn-primary text-xl px-8 py-4"
-              >
-                🔍 Revelar Minha Classe
-              </button>
-            </div>
+            isCardsMode ? (
+              <div>
+                <p className="text-dark-300 mb-6">
+                  🃏 Selecione abaixo a classe da carta que você tirou.<br/>
+                  ⚠️ Mantenha em segredo dos outros jogadores!
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {(config?.allowedClasses || []).map((characterClass) => (
+                    <button
+                      key={characterClass}
+                      onClick={() => handleClassSelection(characterClass)}
+                      className={`px-4 py-3 rounded-lg border transition-all ${
+                        selectedClass === characterClass
+                          ? 'bg-primary-600 border-primary-500'
+                          : 'bg-dark-700 border-dark-600 hover:bg-dark-600'
+                      }`}
+                    >
+                      <div className="text-2xl mb-1">{getCharacterIcon(characterClass)}</div>
+                      <div className="text-sm font-medium">{CHARACTER_NAMES[characterClass]}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div>
+                <p className="text-dark-300 mb-6">
+                  📱 Clique no botão abaixo para revelar sua classe.<br/>
+                  ⚠️ Mantenha em segredo dos outros jogadores!
+                </p>
+                <button
+                  onClick={handleRevealCharacter}
+                  className="btn-primary text-xl px-8 py-4"
+                >
+                  🔍 Revelar Minha Classe
+                </button>
+              </div>
+            )
           ) : (
             <div className="space-y-6">
-              <div className={`bg-gradient-to-r ${getCharacterColor(currentPlayer.character)} rounded-xl p-8 text-white shadow-2xl`}>
+              <div className={`bg-gradient-to-r ${getCharacterColor(isCardsMode && selectedClass ? selectedClass : currentPlayer.character)} rounded-xl p-8 text-white shadow-2xl`}>
                 <div className="text-6xl mb-4">
-                  {getCharacterIcon(currentPlayer.character)}
+                  {getCharacterIcon(isCardsMode && selectedClass ? selectedClass : currentPlayer.character)}
                 </div>
                 <h3 className="text-3xl font-bold mb-2">
-                  {CHARACTER_NAMES[currentPlayer.character]}
+                  {CHARACTER_NAMES[isCardsMode && selectedClass ? selectedClass : currentPlayer.character]}
                 </h3>
                 <p className="text-lg opacity-90">
-                  {CHARACTER_DESCRIPTIONS[currentPlayer.character]}
+                  {CHARACTER_DESCRIPTIONS[isCardsMode && selectedClass ? selectedClass : currentPlayer.character]}
                 </p>
               </div>
 
