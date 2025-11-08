@@ -65,6 +65,20 @@ export default function Game({ gameState, onGameReset }: GameProps) {
       dayPhaseState: componentState?.dayPhase ? JSON.parse(JSON.stringify(componentState.dayPhase)) : undefined
     }
     
+    // Verificar se este estado já foi salvo (evitar duplicação)
+    const lastSaved = gameHistory[gameHistory.length - 1]
+    const isDuplicate = lastSaved && 
+      lastSaved.nightPhaseState?.classicStepIndex === componentState?.nightPhase?.classicStepIndex &&
+      lastSaved.gameState.currentPhase === stateCopy.currentPhase &&
+      JSON.stringify(lastSaved.nightPhaseState?.actions) === JSON.stringify(componentState?.nightPhase?.actions)
+    
+    if (isDuplicate) {
+      console.log('[DEBUG] Estado duplicado detectado, não salvando:', {
+        classicStepIndex: componentState?.nightPhase?.classicStepIndex
+      })
+      return
+    }
+    
     console.log('[DEBUG] Salvando estado no histórico:', {
       phase: stateCopy.currentPhase,
       classicStepIndex: componentState?.nightPhase?.classicStepIndex,

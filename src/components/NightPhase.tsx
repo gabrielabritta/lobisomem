@@ -994,9 +994,11 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
         setInvestigationResults(restoredState.investigationResults || [])
         setUpdatedWitchPotions(restoredState.updatedWitchPotions || gameState?.witchPotions || { healingPotion: true, poisonPotion: true })
         setSilencedThisNight(restoredState.silencedThisNight ?? null)
-        setClassicStepIndex(restoredState.classicStepIndex ?? 0)
-        // Resetar flag de salvamento quando o estado é restaurado
-        lastSavedStepIndexRef.current = restoredState.classicStepIndex ?? null
+        const restoredStepIndex = restoredState.classicStepIndex ?? 0
+        setClassicStepIndex(restoredStepIndex)
+        // Resetar flags de salvamento quando o estado é restaurado
+        lastSavedStepIndexRef.current = restoredStepIndex
+        previousStepIndexRef.current = restoredStepIndex
         
         // Resetar flag de restauração após um pequeno delay
         setTimeout(() => {
@@ -1086,6 +1088,8 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
 
   // Rastrear qual classicStepIndex já foi salvo
   const lastSavedStepIndexRef = useRef<number | null>(null)
+  // Rastrear o classicStepIndex anterior para detectar mudanças reais
+  const previousStepIndexRef = useRef<number | null>(null)
   
   // Flag para evitar salvar durante restauração
   const isRestoringRef = useRef(false)
@@ -1093,12 +1097,23 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
   // Salvar estado quando classicStepIndex muda (modo clássico)
   useEffect(() => {
     const isClassicMode = gameState?.config.gameMode === 'classic'
-    // Só salvar se ainda não salvamos para este classicStepIndex e não estamos restaurando
-    if (isClassicMode && onSaveState && lastSavedStepIndexRef.current !== classicStepIndex && !isRestoringRef.current) {
+    
+    // Verificar se classicStepIndex realmente mudou
+    const stepIndexChanged = previousStepIndexRef.current !== classicStepIndex
+    previousStepIndexRef.current = classicStepIndex
+    
+    // Só salvar se:
+    // 1. Estamos no modo clássico
+    // 2. onSaveState está disponível
+    // 3. O classicStepIndex realmente mudou
+    // 4. Ainda não salvamos para este classicStepIndex
+    // 5. Não estamos restaurando
+    if (isClassicMode && onSaveState && stepIndexChanged && lastSavedStepIndexRef.current !== classicStepIndex && !isRestoringRef.current) {
       lastSavedStepIndexRef.current = classicStepIndex
       console.log('[DEBUG] Salvando estado quando classicStepIndex muda:', {
         classicStepIndex,
-        actionsCount: actions.length
+        actionsCount: actions.length,
+        previousStepIndex: previousStepIndexRef.current
       })
       onSaveState({
         nightPhase: {
@@ -1115,7 +1130,7 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
         }
       })
     }
-  }, [classicStepIndex, gameState?.config.gameMode, onSaveState, currentStep, actions, currentPlayerIndex, playerActionsStartIndex, selectedTarget, usedAbilities, investigationResults, updatedWitchPotions, silencedThisNight])
+  }, [classicStepIndex, gameState?.config.gameMode, onSaveState])
   
   const addAction = (playerId: string, type: ActionType, targetId?: string, data?: any) => {
     // Não salvar mais aqui - o salvamento é feito no useEffect quando classicStepIndex muda
