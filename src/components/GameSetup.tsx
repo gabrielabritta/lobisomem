@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type {
   GameConfig,
   GameState
@@ -58,6 +58,8 @@ export default function GameSetup({ onGameStart }: GameSetupProps) {
     initializePlayerNames(initialConfig.numberOfPlayers)
   )
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
+  const touchStateRef = useRef<{ startY: number; startIndex: number } | null>(null)
 
   // Salvar configurações no cache quando mudarem
   useEffect(() => {
@@ -92,6 +94,114 @@ export default function GameSetup({ onGameStart }: GameSetupProps) {
       newNames[index] = name
       return newNames
     })
+  }
+
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index)
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+  }
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault()
+    
+    if (draggedIndex === null || draggedIndex === dropIndex) {
+      setDraggedIndex(null)
+      return
+    }
+
+    setPlayerNames(prev => {
+      const newNames = [...prev]
+      const draggedName = newNames[draggedIndex]
+      newNames.splice(draggedIndex, 1)
+      newNames.splice(dropIndex, 0, draggedName)
+      return newNames
+    })
+
+    setDraggedIndex(null)
+  }
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null)
+  }
+
+  // Handlers de touch para mobile
+  useEffect(() => {
+    const handleGlobalTouchMove = (e: TouchEvent) => {
+      if (!touchStateRef.current) return
+      
+      e.preventDefault()
+      const touch = e.touches[0]
+      
+      // Encontrar qual elemento está sendo tocado agora
+      const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY)
+      if (elementBelow) {
+        const container = elementBelow.closest('[data-player-index]')
+        if (container) {
+          const dropIndex = parseInt(container.getAttribute('data-player-index') || '-1')
+          if (dropIndex >= 0) {
+            // Manter o índice arrastado para feedback visual
+            setDraggedIndex(touchStateRef.current.startIndex)
+          }
+        }
+      }
+    }
+
+    const handleGlobalTouchEnd = (e: TouchEvent) => {
+      if (!touchStateRef.current) return
+
+      const touch = e.changedTouches[0]
+      const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY)
+      
+      if (elementBelow) {
+        const container = elementBelow.closest('[data-player-index]')
+        if (container) {
+          const dropIndex = parseInt(container.getAttribute('data-player-index') || '-1')
+          
+          if (dropIndex >= 0 && dropIndex !== touchStateRef.current.startIndex) {
+            // Reordenar
+            setPlayerNames(prev => {
+              const newNames = [...prev]
+              const draggedName = newNames[touchStateRef.current!.startIndex]
+              newNames.splice(touchStateRef.current!.startIndex, 1)
+              newNames.splice(dropIndex, 0, draggedName)
+              return newNames
+            })
+          }
+        }
+      }
+
+      touchStateRef.current = null
+      setDraggedIndex(null)
+    }
+
+    // Sempre adicionar listeners, mas só processar quando touchStateRef.current existe
+    document.addEventListener('touchmove', handleGlobalTouchMove, { passive: false })
+    document.addEventListener('touchend', handleGlobalTouchEnd)
+
+    return () => {
+      document.removeEventListener('touchmove', handleGlobalTouchMove)
+      document.removeEventListener('touchend', handleGlobalTouchEnd)
+    }
+  }, [])
+
+  const handleTouchStart = (e: React.TouchEvent, index: number) => {
+    // Só iniciar drag se tocar no ícone ou no container (não no input)
+    const target = e.target as HTMLElement
+    if (target.tagName === 'INPUT') {
+      // Se tocar no input, não iniciar drag
+      return
+    }
+    
+    const touch = e.touches[0]
+    touchStateRef.current = {
+      startY: touch.clientY,
+      startIndex: index
+    }
+    setDraggedIndex(index)
   }
 
   const handleClassToggle = (characterClass: CharacterClass) => {
@@ -378,18 +488,49 @@ export default function GameSetup({ onGameStart }: GameSetupProps) {
         {/* Nomes dos Jogadores */}
         <div className="mb-6">
           <h3 className="text-lg font-semibold mb-3">Nomes dos Jogadores</h3>
+          <p className="text-sm text-dark-400 mb-3">Arraste os campos para reordenar os jogadores</p>
           <div className="grid grid-cols-2 gap-3">
             {playerNames.map((name, index) => (
-              <input
+              <div
                 key={index}
-                type="text"
-                value={name}
-                onChange={(e) => handlePlayerNameChange(index, e.target.value)}
-                className="input-field text-base" // Evita zoom no iOS
-                placeholder={`Jogador ${index + 1}`}
-                autoComplete="off"
-                autoCapitalize="words"
-              />
+                data-player-index={index}
+                draggable
+                onDragStart={() => handleDragStart(index)}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, index)}
+                onDragEnd={handleDragEnd}
+                onTouchStart={(e) => handleTouchStart(e, index)}
+                className={`flex items-center gap-2 px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg transition-all cursor-move ${
+                  draggedIndex === index 
+                    ? 'opacity-50 border-primary-500 bg-primary-900/20' 
+                    : draggedIndex !== null && draggedIndex !== index
+                      ? 'border-primary-400/50 bg-primary-900/10'
+                      : 'hover:border-dark-500'
+                }`}
+              >
+                <div 
+                  className="text-dark-400 select-none text-lg flex-shrink-0 cursor-move" 
+                  title="Arraste para reordenar"
+                >
+                  ⋮⋮
+                </div>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => handlePlayerNameChange(index, e.target.value)}
+                  className="flex-1 bg-transparent border-0 text-white placeholder-dark-400 focus:outline-none focus:ring-0 text-base"
+                  placeholder={`Jogador ${index + 1}`}
+                  autoComplete="off"
+                  autoCapitalize="words"
+                  draggable={false}
+                  onClick={(e) => e.stopPropagation()}
+                  onFocus={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => {
+                    // Se tocar no input, não iniciar drag
+                    e.stopPropagation()
+                  }}
+                />
+              </div>
             ))}
           </div>
         </div>
