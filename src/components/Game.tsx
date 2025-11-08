@@ -65,11 +65,24 @@ export default function Game({ gameState, onGameReset }: GameProps) {
       dayPhaseState: componentState?.dayPhase ? JSON.parse(JSON.stringify(componentState.dayPhase)) : undefined
     }
     
+    console.log('[DEBUG] Salvando estado no histórico:', {
+      phase: stateCopy.currentPhase,
+      classicStepIndex: componentState?.nightPhase?.classicStepIndex,
+      actionsCount: componentState?.nightPhase?.actions?.length,
+      currentHistoryLength: gameHistory.length,
+      historyIndex
+    })
+    
     setGameHistory(prev => {
       // Remove estados futuros se houver (ao desfazer e depois fazer nova ação)
       const newHistory = prev.slice(0, historyIndex + 1)
       // Limita histórico a 50 estados para evitar problemas de memória
       const limitedHistory = [...newHistory, savedState].slice(-50)
+      console.log('[DEBUG] Histórico após adicionar:', {
+        oldLength: prev.length,
+        newLength: limitedHistory.length,
+        historyIndexBefore: historyIndex
+      })
       return limitedHistory
     })
     
@@ -84,11 +97,28 @@ export default function Game({ gameState, onGameReset }: GameProps) {
   const undoLastAction = () => {
     if (!isClassicMode || gameHistory.length === 0) return
     
+    console.log('[DEBUG] Desfazendo ação. Histórico:', {
+      length: gameHistory.length,
+      historyIndex,
+      lastState: gameHistory[gameHistory.length - 1] ? {
+        phase: gameHistory[gameHistory.length - 1].gameState.currentPhase,
+        classicStepIndex: gameHistory[gameHistory.length - 1].nightPhaseState?.classicStepIndex
+      } : null,
+      previousState: gameHistory.length > 1 ? {
+        phase: gameHistory[gameHistory.length - 2].gameState.currentPhase,
+        classicStepIndex: gameHistory[gameHistory.length - 2].nightPhaseState?.classicStepIndex
+      } : null
+    })
+    
     // O último estado salvo está no final do histórico (historyIndex aponta para o último)
     // Ao desfazer, queremos restaurar o estado anterior ao último salvo
     if (gameHistory.length > 1) {
       // Restaurar o penúltimo estado
       const previousState = gameHistory[gameHistory.length - 2]
+      console.log('[DEBUG] Restaurando penúltimo estado:', {
+        classicStepIndex: previousState.nightPhaseState?.classicStepIndex,
+        actionsCount: previousState.nightPhaseState?.actions?.length
+      })
       setCurrentGameState(previousState.gameState)
       // Restaurar estados internos dos componentes se existirem
       // Criar deep copy para garantir nova referência e forçar rerenderização
@@ -105,7 +135,14 @@ export default function Game({ gameState, onGameReset }: GameProps) {
         setRestoredDayPhaseState(null)
       }
       // Remove o último estado do histórico
-      setGameHistory(prev => prev.slice(0, -1))
+      setGameHistory(prev => {
+        const newHistory = prev.slice(0, -1)
+        console.log('[DEBUG] Histórico após remover último:', {
+          oldLength: prev.length,
+          newLength: newHistory.length
+        })
+        return newHistory
+      })
       setHistoryIndex(prev => Math.max(0, prev - 1))
     } else if (gameHistory.length === 1) {
       // Se só há um estado salvo, restaurar ele e limpar o histórico

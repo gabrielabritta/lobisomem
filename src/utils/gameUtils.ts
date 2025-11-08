@@ -288,28 +288,28 @@ export function checkVictoryConditions(gameState: GameState): {
         nonVampiresCount,
         totalAlive: alivePlayers.length 
       })
-      
+    
       const vampireIds = aliveVampires.map(p => p.id);
       let winners = [...vampireIds];
-      
-      // Adicionar vencedores do Cupido na ordem correta
-      const cupidData = getCupidWinners(alivePlayers, cupidPlayer, Team.EVIL, winners);
-      
-      // Adicionar apaixonados do time vencedor no final da lista do time vencedor
-      winners.push(...cupidData.loversInWinningTeam);
-      
-      // Adicionar apaixonados que não são do time vencedor
-      winners.push(...cupidData.loversNotInWinningTeam);
-      
-      // Adicionar Cupido por último
-      winners.push(...cupidData.cupidWinners);
-      
-      return {
-        hasWinner: true,
-        winners,
-        winningTeam: Team.EVIL,
+    
+    // Adicionar vencedores do Cupido na ordem correta
+    const cupidData = getCupidWinners(alivePlayers, cupidPlayer, Team.EVIL, winners);
+    
+    // Adicionar apaixonados do time vencedor no final da lista do time vencedor
+    winners.push(...cupidData.loversInWinningTeam);
+    
+    // Adicionar apaixonados que não são do time vencedor
+    winners.push(...cupidData.loversNotInWinningTeam);
+    
+    // Adicionar Cupido por último
+    winners.push(...cupidData.cupidWinners);
+    
+    return {
+      hasWinner: true,
+      winners,
+      winningTeam: Team.EVIL,
         reason: 'Vampiros venceram - número igual ou superior aos não-vampiros'
-      };
+    };
     }
   }
 

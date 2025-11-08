@@ -981,6 +981,9 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
       if (previousRestoredStateRef.current !== stateString) {
         previousRestoredStateRef.current = stateString
         
+        // Marcar que estamos restaurando para evitar salvamento durante restauração
+        isRestoringRef.current = true
+        
         // Atualizar todos os estados para garantir rerenderização
         setCurrentStep(restoredState.currentStep || 'werewolves')
         setActions(restoredState.actions || [])
@@ -992,6 +995,13 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
         setUpdatedWitchPotions(restoredState.updatedWitchPotions || gameState?.witchPotions || { healingPotion: true, poisonPotion: true })
         setSilencedThisNight(restoredState.silencedThisNight ?? null)
         setClassicStepIndex(restoredState.classicStepIndex ?? 0)
+        // Resetar flag de salvamento quando o estado é restaurado
+        lastSavedStepIndexRef.current = restoredState.classicStepIndex ?? null
+        
+        // Resetar flag de restauração após um pequeno delay
+        setTimeout(() => {
+          isRestoringRef.current = false
+        }, 100)
       }
     } else {
       // Limpar ref quando restoredState for null
@@ -1074,15 +1084,26 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
 
   console.log('Jogadores com ações:', actionPlayers.map(p => ({ name: p.name, character: p.character })))
 
-  const addAction = (playerId: string, type: ActionType, targetId?: string, data?: any) => {
-    // Salvar estado antes da ação (modo clássico)
+  // Rastrear qual classicStepIndex já foi salvo
+  const lastSavedStepIndexRef = useRef<number | null>(null)
+  
+  // Flag para evitar salvar durante restauração
+  const isRestoringRef = useRef(false)
+  
+  // Salvar estado quando classicStepIndex muda (modo clássico)
+  useEffect(() => {
     const isClassicMode = gameState?.config.gameMode === 'classic'
-    if (isClassicMode && onSaveState) {
-      // Salvar estado interno do componente junto
+    // Só salvar se ainda não salvamos para este classicStepIndex e não estamos restaurando
+    if (isClassicMode && onSaveState && lastSavedStepIndexRef.current !== classicStepIndex && !isRestoringRef.current) {
+      lastSavedStepIndexRef.current = classicStepIndex
+      console.log('[DEBUG] Salvando estado quando classicStepIndex muda:', {
+        classicStepIndex,
+        actionsCount: actions.length
+      })
       onSaveState({
         nightPhase: {
           currentStep,
-          actions: [...actions], // Estado atual antes de adicionar nova ação
+          actions: [...actions], // Estado atual antes de qualquer ação neste passo
           currentPlayerIndex,
           playerActionsStartIndex,
           selectedTarget,
@@ -1090,10 +1111,14 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
           investigationResults,
           updatedWitchPotions,
           silencedThisNight,
-          classicStepIndex // Salvar índice do passo clássico
+          classicStepIndex
         }
       })
     }
+  }, [classicStepIndex, gameState?.config.gameMode, onSaveState, currentStep, actions, currentPlayerIndex, playerActionsStartIndex, selectedTarget, usedAbilities, investigationResults, updatedWitchPotions, silencedThisNight])
+  
+  const addAction = (playerId: string, type: ActionType, targetId?: string, data?: any) => {
+    // Não salvar mais aqui - o salvamento é feito no useEffect quando classicStepIndex muda
 
     const newAction: GameAction = {
       id: `action_${Date.now()}_${Math.random()}`,
@@ -1456,7 +1481,10 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
     }
     return classicEnabledClasses.includes(cls)
   })
-  const advanceClassic = () => setClassicStepIndex(prev => Math.min(prev + 1, classicStepsOrdered.length))
+  const advanceClassic = () => {
+    setClassicStepIndex(prev => Math.min(prev + 1, classicStepsOrdered.length))
+    // O useEffect vai detectar a mudança e salvar o estado automaticamente
+  }
 
   const renderClassicStep = () => {
     const currentClass = classicStepsOrdered[classicStepIndex]
