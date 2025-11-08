@@ -40,6 +40,7 @@ export enum GamePhase {
   DAY = 'day',
   VOTING = 'voting',
   SILVER_BULLET_DAY = 'silver_bullet_day', // Quando Bala de Prata é expulso durante o dia
+  SILVER_BULLET_RESULT = 'silver_bullet_result', // Resultado do tiro do Bala de Prata
   ENDED = 'ended'
 }
 
