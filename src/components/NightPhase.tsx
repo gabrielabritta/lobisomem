@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { Player, GameAction, GameState, WitchPotions } from '../types/game'
 import { ActionType, CharacterClass, CHARACTER_NAMES } from '../types/game'
 import { isWerewolf, getCharacterIcon } from '../utils/gameUtils'
@@ -949,18 +949,55 @@ interface NightPhaseProps {
   onNightComplete: (actions: GameAction[], updatedPlayers: Player[], updatedGameState?: Partial<GameState>) => void
   onShowGameStatus?: () => void
   onGameReset?: () => void
+  onSaveState?: (componentState?: any) => void
+  onUndo?: () => void
+  canUndo?: boolean
+  restoredState?: any // Estado restaurado após desfazer
 }
 
-export default function NightPhase({ players, nightNumber, gameState, onNightComplete, onShowGameStatus, onGameReset }: NightPhaseProps) {
-  const [currentStep, setCurrentStep] = useState<NightStep>('werewolves')
-  const [actions, setActions] = useState<GameAction[]>([])
-  const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0)
-  const [playerActionsStartIndex, setPlayerActionsStartIndex] = useState<number | null>(null)
-  const [selectedTarget, setSelectedTarget] = useState<string>('')
-  const [usedAbilities, setUsedAbilities] = useState<{ [playerId: string]: string[] }>(gameState?.usedAbilities || {})
-  const [investigationResults, setInvestigationResults] = useState<{ playerId: string, result: string, type: 'vidente' | 'medium' }[]>([])
-  const [updatedWitchPotions, setUpdatedWitchPotions] = useState(gameState?.witchPotions || { healingPotion: true, poisonPotion: true })
-  const [silencedThisNight, setSilencedThisNight] = useState<string | null>(null)
+export default function NightPhase({ players, nightNumber, gameState, onNightComplete, onShowGameStatus, onGameReset, onSaveState, onUndo, canUndo, restoredState }: NightPhaseProps) {
+  // Inicializar estados com valores restaurados se disponíveis
+  const [currentStep, setCurrentStep] = useState<NightStep>(restoredState?.currentStep || 'werewolves')
+  const [actions, setActions] = useState<GameAction[]>(restoredState?.actions || [])
+  const [currentPlayerIndex, setCurrentPlayerIndex] = useState(restoredState?.currentPlayerIndex || 0)
+  const [playerActionsStartIndex, setPlayerActionsStartIndex] = useState<number | null>(restoredState?.playerActionsStartIndex ?? null)
+  const [selectedTarget, setSelectedTarget] = useState<string>(restoredState?.selectedTarget || '')
+  const [usedAbilities, setUsedAbilities] = useState<{ [playerId: string]: string[] }>(restoredState?.usedAbilities || gameState?.usedAbilities || {})
+  const [investigationResults, setInvestigationResults] = useState<{ playerId: string, result: string, type: 'vidente' | 'medium' }[]>(restoredState?.investigationResults || [])
+  const [updatedWitchPotions, setUpdatedWitchPotions] = useState(restoredState?.updatedWitchPotions || gameState?.witchPotions || { healingPotion: true, poisonPotion: true })
+  const [silencedThisNight, setSilencedThisNight] = useState<string | null>(restoredState?.silencedThisNight ?? null)
+  const [classicStepIndex, setClassicStepIndex] = useState(restoredState?.classicStepIndex ?? 0)
+
+  // Usar ref para rastrear o estado anterior e detectar mudanças mesmo com mesma referência
+  const previousRestoredStateRef = useRef<string>('')
+  
+  // Restaurar estado quando restoredState mudar
+  useEffect(() => {
+    if (restoredState) {
+      // Criar uma string única para comparar mudanças (mesmo que referência seja igual)
+      const stateString = JSON.stringify(restoredState)
+      
+      // Só atualizar se o estado realmente mudou
+      if (previousRestoredStateRef.current !== stateString) {
+        previousRestoredStateRef.current = stateString
+        
+        // Atualizar todos os estados para garantir rerenderização
+        setCurrentStep(restoredState.currentStep || 'werewolves')
+        setActions(restoredState.actions || [])
+        setCurrentPlayerIndex(restoredState.currentPlayerIndex || 0)
+        setPlayerActionsStartIndex(restoredState.playerActionsStartIndex ?? null)
+        setSelectedTarget(restoredState.selectedTarget || '')
+        setUsedAbilities(restoredState.usedAbilities || gameState?.usedAbilities || {})
+        setInvestigationResults(restoredState.investigationResults || [])
+        setUpdatedWitchPotions(restoredState.updatedWitchPotions || gameState?.witchPotions || { healingPotion: true, poisonPotion: true })
+        setSilencedThisNight(restoredState.silencedThisNight ?? null)
+        setClassicStepIndex(restoredState.classicStepIndex ?? 0)
+      }
+    } else {
+      // Limpar ref quando restoredState for null
+      previousRestoredStateRef.current = ''
+    }
+  }, [restoredState, gameState?.usedAbilities, gameState?.witchPotions])
 
 
 
@@ -1038,6 +1075,26 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
   console.log('Jogadores com ações:', actionPlayers.map(p => ({ name: p.name, character: p.character })))
 
   const addAction = (playerId: string, type: ActionType, targetId?: string, data?: any) => {
+    // Salvar estado antes da ação (modo clássico)
+    const isClassicMode = gameState?.config.gameMode === 'classic'
+    if (isClassicMode && onSaveState) {
+      // Salvar estado interno do componente junto
+      onSaveState({
+        nightPhase: {
+          currentStep,
+          actions: [...actions], // Estado atual antes de adicionar nova ação
+          currentPlayerIndex,
+          playerActionsStartIndex,
+          selectedTarget,
+          usedAbilities,
+          investigationResults,
+          updatedWitchPotions,
+          silencedThisNight,
+          classicStepIndex // Salvar índice do passo clássico
+        }
+      })
+    }
+
     const newAction: GameAction = {
       id: `action_${Date.now()}_${Math.random()}`,
       playerId,
@@ -1399,7 +1456,6 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
     }
     return classicEnabledClasses.includes(cls)
   })
-  const [classicStepIndex, setClassicStepIndex] = useState(0)
   const advanceClassic = () => setClassicStepIndex(prev => Math.min(prev + 1, classicStepsOrdered.length))
 
   const renderClassicStep = () => {
@@ -1660,6 +1716,16 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
               </div>
               {onShowGameStatus && onGameReset && (
                 <div className="flex gap-3 w-full sm:w-auto justify-center">
+                  {isClassicMode && onUndo && (
+                    <button
+                      onClick={onUndo}
+                      disabled={!canUndo}
+                      className="btn-secondary text-sm px-6 py-2 flex-1 sm:flex-initial min-w-[140px] disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Desfazer última ação"
+                    >
+                      ⏪ Desfazer
+                    </button>
+                  )}
                   <button onClick={onShowGameStatus} className="btn-secondary text-sm px-6 py-2 flex-1 sm:flex-initial min-w-[140px]" title="Abrir modal com situação geral do jogo">📊 Planilha</button>
                   <button onClick={() => { if (confirm('Tem certeza que deseja iniciar uma nova partida? Todos os progressos atuais serão perdidos.')) { onGameReset && onGameReset() } }} className="btn-secondary text-sm px-6 py-2 flex-1 sm:flex-initial min-w-[140px]">🔄 Nova Partida</button>
                 </div>
@@ -1695,6 +1761,16 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
             </div>
             {onShowGameStatus && onGameReset && (
               <div className="flex gap-3 w-full sm:w-auto justify-center">
+                {isClassicMode && onUndo && (
+                  <button
+                    onClick={onUndo}
+                    disabled={!canUndo}
+                    className="btn-secondary text-sm px-6 py-2 flex-1 sm:flex-initial min-w-[140px] disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Desfazer última ação"
+                  >
+                    ⏪ Desfazer
+                  </button>
+                )}
                 <button
                   onClick={onShowGameStatus}
                   className="btn-secondary text-sm px-6 py-2 flex-1 sm:flex-initial min-w-[140px]"

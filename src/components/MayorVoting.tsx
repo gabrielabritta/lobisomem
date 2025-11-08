@@ -6,9 +6,10 @@ interface MayorVotingProps {
   players: Player[]
   config: GameConfig
   onVotingComplete: (mayorId: string) => void
+  onSaveState?: () => void
 }
 
-export default function MayorVoting({ players, config, onVotingComplete }: MayorVotingProps) {
+export default function MayorVoting({ players, config, onVotingComplete, onSaveState }: MayorVotingProps) {
   const [currentVoterIndex, setCurrentVoterIndex] = useState(0)
   const [votes, setVotes] = useState<{ [playerId: string]: string }>({})
   const [showVotes, setShowVotes] = useState(!config.mayorVotingAnonymous)
@@ -60,6 +61,11 @@ export default function MayorVoting({ players, config, onVotingComplete }: Mayor
   }
 
   const handleVote = (targetId: string) => {
+    // Salvar estado antes do voto (modo clássico)
+    if (config.gameMode === 'classic' && onSaveState) {
+      onSaveState()
+    }
+
     const newVotes = { ...votes, [currentVoter.id]: targetId }
     setVotes(newVotes)
 

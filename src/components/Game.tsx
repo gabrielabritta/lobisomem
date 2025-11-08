@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { GameState, Player, GameAction } from '../types/game'
 import { GamePhase, CHARACTER_NAMES, CharacterClass } from '../types/game'
 import CharacterDistribution from './CharacterDistribution'
@@ -9,7 +9,7 @@ import DayPhase from './DayPhase'
 import SilverBulletPhase from './SilverBulletPhase'
 import GameStatusModal from './GameStatusModal'
 import { resolveNightActions, processSilverBulletShot } from '../utils/actionResolver'
-import { checkVictoryConditions, applyLoveDeath, applyBloodBondDeath, getCharacterTeam } from '../utils/gameUtils'
+import { checkVictoryConditions, applyLoveDeath, applyBloodBondDeath, getCharacterTeam, calculateWerewolfAndEvilCounts } from '../utils/gameUtils'
 
 interface GameProps {
   gameState: GameState
@@ -25,11 +25,113 @@ export default function Game({ gameState, onGameReset }: GameProps) {
     deathReasons: { [playerId: string]: string }
   }>({ deadPlayers: [], messages: [], investigations: {}, deathReasons: {} })
   const [showGameStatus, setShowGameStatus] = useState(false)
+  
+  // Estados para histórico de desfazer (apenas modo clássico)
+  // Armazena tanto o GameState quanto os estados internos dos componentes
+  interface SavedState {
+    gameState: GameState
+    nightPhaseState?: any // Estado interno do NightPhase
+    dayPhaseState?: any // Estado interno do DayPhase
+  }
+  
+  const [gameHistory, setGameHistory] = useState<SavedState[]>([])
+  const [historyIndex, setHistoryIndex] = useState(-1)
+  const [restoredNightPhaseState, setRestoredNightPhaseState] = useState<any>(null)
+  const [restoredDayPhaseState, setRestoredDayPhaseState] = useState<any>(null)
+  
+  const isClassicMode = currentGameState.config.gameMode === 'classic'
+
+  // Limpar estados restaurados quando mudamos de fase
+  useEffect(() => {
+    // Limpar estados restaurados quando não estamos mais na fase correspondente
+    if (currentGameState.currentPhase !== GamePhase.NIGHT) {
+      setRestoredNightPhaseState(null)
+    }
+    if (currentGameState.currentPhase !== GamePhase.DAY) {
+      setRestoredDayPhaseState(null)
+    }
+  }, [currentGameState.currentPhase])
+
+  // Função para salvar estado atual no histórico (apenas modo clássico)
+  const saveGameState = (componentState?: { nightPhase?: any, dayPhase?: any }) => {
+    if (!isClassicMode) return
+    
+    // Deep copy do estado atual
+    const stateCopy: GameState = JSON.parse(JSON.stringify(currentGameState))
+    
+    const savedState: SavedState = {
+      gameState: stateCopy,
+      nightPhaseState: componentState?.nightPhase ? JSON.parse(JSON.stringify(componentState.nightPhase)) : undefined,
+      dayPhaseState: componentState?.dayPhase ? JSON.parse(JSON.stringify(componentState.dayPhase)) : undefined
+    }
+    
+    setGameHistory(prev => {
+      // Remove estados futuros se houver (ao desfazer e depois fazer nova ação)
+      const newHistory = prev.slice(0, historyIndex + 1)
+      // Limita histórico a 50 estados para evitar problemas de memória
+      const limitedHistory = [...newHistory, savedState].slice(-50)
+      return limitedHistory
+    })
+    
+    setHistoryIndex(prev => {
+      const newIndex = prev + 1
+      // Limita índice ao tamanho do histórico
+      return Math.min(newIndex, 49)
+    })
+  }
+
+  // Função para desfazer última ação (apenas modo clássico)
+  const undoLastAction = () => {
+    if (!isClassicMode || gameHistory.length === 0) return
+    
+    // O último estado salvo está no final do histórico (historyIndex aponta para o último)
+    // Ao desfazer, queremos restaurar o estado anterior ao último salvo
+    if (gameHistory.length > 1) {
+      // Restaurar o penúltimo estado
+      const previousState = gameHistory[gameHistory.length - 2]
+      setCurrentGameState(previousState.gameState)
+      // Restaurar estados internos dos componentes se existirem
+      // Criar deep copy para garantir nova referência e forçar rerenderização
+      if (previousState.gameState.currentPhase === GamePhase.NIGHT && previousState.nightPhaseState) {
+        const newNightState = JSON.parse(JSON.stringify(previousState.nightPhaseState))
+        setRestoredNightPhaseState(newNightState)
+        setRestoredDayPhaseState(null)
+      } else if (previousState.gameState.currentPhase === GamePhase.DAY && previousState.dayPhaseState) {
+        const newDayState = JSON.parse(JSON.stringify(previousState.dayPhaseState))
+        setRestoredDayPhaseState(newDayState)
+        setRestoredNightPhaseState(null)
+      } else {
+        setRestoredNightPhaseState(null)
+        setRestoredDayPhaseState(null)
+      }
+      // Remove o último estado do histórico
+      setGameHistory(prev => prev.slice(0, -1))
+      setHistoryIndex(prev => Math.max(0, prev - 1))
+    } else if (gameHistory.length === 1) {
+      // Se só há um estado salvo, restaurar ele e limpar o histórico
+      const previousState = gameHistory[0]
+      setCurrentGameState(previousState.gameState)
+      if (previousState.gameState.currentPhase === GamePhase.NIGHT && previousState.nightPhaseState) {
+        const newNightState = JSON.parse(JSON.stringify(previousState.nightPhaseState))
+        setRestoredNightPhaseState(newNightState)
+        setRestoredDayPhaseState(null)
+      } else if (previousState.gameState.currentPhase === GamePhase.DAY && previousState.dayPhaseState) {
+        const newDayState = JSON.parse(JSON.stringify(previousState.dayPhaseState))
+        setRestoredDayPhaseState(newDayState)
+        setRestoredNightPhaseState(null)
+      } else {
+        setRestoredNightPhaseState(null)
+        setRestoredDayPhaseState(null)
+      }
+      setGameHistory([])
+      setHistoryIndex(-1)
+    }
+  }
 
   const handlePlayerCharacterUpdate = (playerId: string, character: CharacterClass) => {
-    setCurrentGameState(prev => ({
-      ...prev,
-      players: prev.players.map(player => {
+    setCurrentGameState(prev => {
+      // Atualizar a classe do jogador
+      const updatedPlayers = prev.players.map(player => {
         if (player.id === playerId) {
           return {
             ...player,
@@ -41,7 +143,20 @@ export default function Game({ gameState, onGameReset }: GameProps) {
         }
         return player
       })
-    }))
+
+      // Calcular numberOfWerewolves e numberOfAlternativeEvil a partir dos jogadores atualizados
+      const { numberOfWerewolves, numberOfAlternativeEvil } = calculateWerewolfAndEvilCounts(updatedPlayers)
+
+      return {
+        ...prev,
+        players: updatedPlayers,
+        config: {
+          ...prev.config,
+          numberOfWerewolves,
+          numberOfAlternativeEvil
+        }
+      }
+    })
   }
 
   const handleDistributionComplete = () => {
@@ -294,6 +409,16 @@ export default function Game({ gameState, onGameReset }: GameProps) {
               <span className="text-sm text-dark-400">👥 {currentGameState.players.filter(p => p.isAlive).length} vivos</span>
           </div>
             <div className="flex gap-3 w-full sm:w-auto justify-center">
+              {isClassicMode && (
+                <button
+                  onClick={undoLastAction}
+                  disabled={historyIndex < 0 || gameHistory.length === 0}
+                  className="btn-secondary text-sm px-6 py-2 flex-1 sm:flex-initial min-w-[140px] disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Desfazer última ação"
+                >
+                  ⏪ Desfazer
+                </button>
+              )}
               <button
                 onClick={() => setShowGameStatus(true)}
                 className="btn-secondary text-sm px-6 py-2 flex-1 sm:flex-initial min-w-[140px]"
@@ -331,6 +456,7 @@ export default function Game({ gameState, onGameReset }: GameProps) {
           players={currentGameState.players}
           gameMode={currentGameState.config.gameMode}
           onActionsComplete={handleInitialActionsComplete}
+          onSaveState={saveGameState}
         />
       )}
 
@@ -339,6 +465,7 @@ export default function Game({ gameState, onGameReset }: GameProps) {
           players={currentGameState.players}
           config={currentGameState.config}
           onVotingComplete={handleMayorVotingComplete}
+          onSaveState={saveGameState}
         />
       )}
 
@@ -351,6 +478,10 @@ export default function Game({ gameState, onGameReset }: GameProps) {
           onNightComplete={handleNightComplete}
           onShowGameStatus={() => setShowGameStatus(true)}
           onGameReset={onGameReset}
+          onSaveState={saveGameState}
+          onUndo={undoLastAction}
+          canUndo={historyIndex >= 0 && gameHistory.length > 0}
+          restoredState={restoredNightPhaseState}
         />
       )}
 
@@ -371,6 +502,10 @@ export default function Game({ gameState, onGameReset }: GameProps) {
           onSilverBulletShot={handleSilverBulletShot}
           onShowGameStatus={() => setShowGameStatus(true)}
           onGameReset={onGameReset}
+          onSaveState={saveGameState}
+          onUndo={undoLastAction}
+          canUndo={historyIndex >= 0 && gameHistory.length > 0}
+          restoredState={restoredDayPhaseState}
         />
       )}
 

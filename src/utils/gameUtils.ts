@@ -55,6 +55,29 @@ export function isWerewolf(character: CharacterClass): boolean {
   return WEREWOLF_CLASSES.includes(character);
 }
 
+// Função para calcular numberOfWerewolves e numberOfAlternativeEvil a partir de jogadores
+export function calculateWerewolfAndEvilCounts(players: Player[]): {
+  numberOfWerewolves: number;
+  numberOfAlternativeEvil: number;
+} {
+  const numberOfWerewolves = players.filter(p => 
+    p.character && isWerewolf(p.character)
+  ).length;
+
+  const alternativeEvilClasses = [
+    CharacterClass.VAMPIRO,
+    CharacterClass.TRAIDOR,
+    CharacterClass.ZUMBI,
+    CharacterClass.BOBO
+  ];
+
+  const numberOfAlternativeEvil = players.filter(p => 
+    p.character && alternativeEvilClasses.includes(p.character)
+  ).length;
+
+  return { numberOfWerewolves, numberOfAlternativeEvil };
+}
+
 // Função para criar jogadores sem classes atribuídas (modo cartas físicas)
 export function createPlayersWithoutClasses(
   playerNames: string[],

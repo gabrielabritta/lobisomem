@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { Player, GameConfig } from '../types/game'
 import { CharacterClass, CHARACTER_NAMES } from '../types/game'
 import { processVotes } from '../utils/gameUtils'
@@ -21,6 +21,10 @@ interface DayPhaseProps {
   onSilverBulletShot?: (silverBulletPlayerId: string, targetId: string, trigger: 'night_death' | 'day_expulsion') => void
   onShowGameStatus?: () => void
   onGameReset?: () => void
+  onSaveState?: (componentState?: any) => void
+  onUndo?: () => void
+  canUndo?: boolean
+  restoredState?: any // Estado restaurado após desfazer
 }
 
 type DayStep = 
@@ -49,20 +53,55 @@ export default function DayPhase({
   onDayComplete,
   onSilverBulletShot,
   onShowGameStatus,
-  onGameReset
+  onGameReset,
+  onSaveState,
+  onUndo,
+  canUndo,
+  restoredState
 }: DayPhaseProps) {
-  const [currentStep, setCurrentStep] = useState<DayStep>('deaths_announcement')
-  const [discussionTimeLeft, setDiscussionTimeLeft] = useState(config.discussionTime * 60)
-  const [currentVoterIndex, setCurrentVoterIndex] = useState(0)
-  const [votes, setVotes] = useState<{ [playerId: string]: string }>({})
-  const [newMayorId, setNewMayorId] = useState<string>(mayorId || '')
+  // Inicializar estados com valores restaurados se disponíveis
+  const [currentStep, setCurrentStep] = useState<DayStep>(restoredState?.currentStep || 'deaths_announcement')
+  const [discussionTimeLeft, setDiscussionTimeLeft] = useState(restoredState?.discussionTimeLeft ?? config.discussionTime * 60)
+  const [currentVoterIndex, setCurrentVoterIndex] = useState(restoredState?.currentVoterIndex || 0)
+  const [votes, setVotes] = useState<{ [playerId: string]: string }>(restoredState?.votes || {})
+  const [newMayorId, setNewMayorId] = useState<string>(restoredState?.newMayorId || mayorId || '')
   const [showVotes] = useState(!config.expulsionVotingAnonymous)
-  const [votingResult, setVotingResult] = useState<{ winner: string | null, tied: boolean, tiedPlayers: string[], mayorDecided?: boolean } | null>(null)
+  const [votingResult, setVotingResult] = useState<{ winner: string | null, tied: boolean, tiedPlayers: string[], mayorDecided?: boolean } | null>(restoredState?.votingResult || null)
   
   // Estados para votação de reeleição do prefeito
-  const [mayorReelectionVotes, setMayorReelectionVotes] = useState<{ [playerId: string]: string }>({})
-  const [mayorReelectionVoterIndex, setMayorReelectionVoterIndex] = useState(0)
-  const [mayorReelectionResult, setMayorReelectionResult] = useState<{ winner: string | null, tied: boolean, tiedPlayers: string[] } | null>(null)
+  const [mayorReelectionVotes, setMayorReelectionVotes] = useState<{ [playerId: string]: string }>(restoredState?.mayorReelectionVotes || {})
+  const [mayorReelectionVoterIndex, setMayorReelectionVoterIndex] = useState(restoredState?.mayorReelectionVoterIndex || 0)
+  const [mayorReelectionResult, setMayorReelectionResult] = useState<{ winner: string | null, tied: boolean, tiedPlayers: string[] } | null>(restoredState?.mayorReelectionResult || null)
+
+  // Usar ref para rastrear o estado anterior e detectar mudanças mesmo com mesma referência
+  const previousRestoredStateRef = useRef<string>('')
+  
+  // Restaurar estado quando restoredState mudar
+  useEffect(() => {
+    if (restoredState) {
+      // Criar uma string única para comparar mudanças (mesmo que referência seja igual)
+      const stateString = JSON.stringify(restoredState)
+      
+      // Só atualizar se o estado realmente mudou
+      if (previousRestoredStateRef.current !== stateString) {
+        previousRestoredStateRef.current = stateString
+        
+        // Atualizar todos os estados para garantir rerenderização
+        setCurrentStep(restoredState.currentStep || 'deaths_announcement')
+        setDiscussionTimeLeft(restoredState.discussionTimeLeft ?? config.discussionTime * 60)
+        setCurrentVoterIndex(restoredState.currentVoterIndex || 0)
+        setVotes(restoredState.votes || {})
+        setNewMayorId(restoredState.newMayorId || mayorId || '')
+        setVotingResult(restoredState.votingResult || null)
+        setMayorReelectionVotes(restoredState.mayorReelectionVotes || {})
+        setMayorReelectionVoterIndex(restoredState.mayorReelectionVoterIndex || 0)
+        setMayorReelectionResult(restoredState.mayorReelectionResult || null)
+      }
+    } else {
+      // Limpar ref quando restoredState for null
+      previousRestoredStateRef.current = ''
+    }
+  }, [restoredState, config.discussionTime, mayorId])
 
   const alivePlayers = players.filter(p => p.isAlive)
   const currentVoter = alivePlayers[currentVoterIndex]
@@ -195,6 +234,24 @@ export default function DayPhase({
 
   // Funções para votação de reeleição do prefeito
   const handleMayorReelectionVote = (targetId: string) => {
+    // Salvar estado antes do voto (modo clássico)
+    if (config.gameMode === 'classic' && onSaveState) {
+      // Salvar estado interno do componente junto
+      onSaveState({
+        dayPhase: {
+          currentStep,
+          discussionTimeLeft,
+          currentVoterIndex,
+          votes,
+          newMayorId,
+          votingResult,
+          mayorReelectionVotes: { ...mayorReelectionVotes }, // Estado atual antes de adicionar novo voto
+          mayorReelectionVoterIndex,
+          mayorReelectionResult
+        }
+      })
+    }
+
     const newVotes = { ...mayorReelectionVotes, [alivePlayers[mayorReelectionVoterIndex].id]: targetId }
     setMayorReelectionVotes(newVotes)
 
@@ -223,6 +280,24 @@ export default function DayPhase({
   }
 
   const handleVote = (targetId: string) => {
+    // Salvar estado antes do voto (modo clássico)
+    if (config.gameMode === 'classic' && onSaveState) {
+      // Salvar estado interno do componente junto
+      onSaveState({
+        dayPhase: {
+          currentStep,
+          discussionTimeLeft,
+          currentVoterIndex,
+          votes: { ...votes }, // Estado atual antes de adicionar novo voto
+          newMayorId,
+          votingResult,
+          mayorReelectionVotes,
+          mayorReelectionVoterIndex,
+          mayorReelectionResult
+        }
+      })
+    }
+
     const newVotes = { ...votes, [currentVoter.id]: targetId };
     setVotes(newVotes);
 
@@ -355,6 +430,16 @@ const handleMayorTieChoice = (expelledPlayerId: string) => {
             </div>
             {onShowGameStatus && onGameReset && (
               <div className="flex gap-3 w-full sm:w-auto justify-center">
+                {config.gameMode === 'classic' && onUndo && (
+                  <button
+                    onClick={onUndo}
+                    disabled={!canUndo}
+                    className="btn-secondary text-sm px-6 py-2 flex-1 sm:flex-initial min-w-[140px] disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Desfazer última ação"
+                  >
+                    ⏪ Desfazer
+                  </button>
+                )}
                 <button
                   onClick={onShowGameStatus}
                   className="btn-secondary text-sm px-6 py-2 flex-1 sm:flex-initial min-w-[140px]"

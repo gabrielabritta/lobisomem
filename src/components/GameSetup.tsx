@@ -314,41 +314,46 @@ export default function GameSetup({ onGameStart }: GameSetupProps) {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Número de Lobisomens: {config.numberOfWerewolves}
-            </label>
-            <input
-              type="range"
-              min="1"
-              max={Math.floor(config.numberOfPlayers / 2)}
-              value={config.numberOfWerewolves}
-              onChange={(e) => setConfig(prev => ({ ...prev, numberOfWerewolves: Number(e.target.value) }))}
-              className="w-full h-2 bg-dark-700 rounded-lg appearance-none cursor-pointer slider"
-            />
-            <div className="flex justify-between text-xs text-dark-400 mt-0.5">
-              <span>1</span>
-              <span>{Math.floor(config.numberOfPlayers / 2)}</span>
-            </div>
-          </div>
+          {/* Sliders apenas visíveis no modo "app" */}
+          {(config.distributionMethod || 'app') === 'app' && (
+            <>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Número de Lobisomens: {config.numberOfWerewolves}
+                </label>
+                <input
+                  type="range"
+                  min="1"
+                  max={Math.floor(config.numberOfPlayers / 2)}
+                  value={config.numberOfWerewolves}
+                  onChange={(e) => setConfig(prev => ({ ...prev, numberOfWerewolves: Number(e.target.value) }))}
+                  className="w-full h-2 bg-dark-700 rounded-lg appearance-none cursor-pointer slider"
+                />
+                <div className="flex justify-between text-xs text-dark-400 mt-0.5">
+                  <span>1</span>
+                  <span>{Math.floor(config.numberOfPlayers / 2)}</span>
+                </div>
+              </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Classes Más Alternativas: {config.numberOfAlternativeEvil}
-            </label>
-            <input
-              type="range"
-              min="0"
-              max="3"
-              value={config.numberOfAlternativeEvil}
-              onChange={(e) => setConfig(prev => ({ ...prev, numberOfAlternativeEvil: Number(e.target.value) }))}
-              className="w-full h-2 bg-dark-700 rounded-lg appearance-none cursor-pointer slider"
-            />
-            <div className="flex justify-between text-xs text-dark-400 mt-0.5">
-              <span>0</span>
-              <span>3</span>
-            </div>
-          </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Classes Más Alternativas: {config.numberOfAlternativeEvil}
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="3"
+                  value={config.numberOfAlternativeEvil}
+                  onChange={(e) => setConfig(prev => ({ ...prev, numberOfAlternativeEvil: Number(e.target.value) }))}
+                  className="w-full h-2 bg-dark-700 rounded-lg appearance-none cursor-pointer slider"
+                />
+                <div className="flex justify-between text-xs text-dark-400 mt-0.5">
+                  <span>0</span>
+                  <span>3</span>
+                </div>
+              </div>
+            </>
+          )}
 
           <div>
             <label className="block text-sm font-medium mb-1">
@@ -510,8 +515,8 @@ export default function GameSetup({ onGameStart }: GameSetupProps) {
           )}
         </div>
 
-        {/* Aviso de preenchimento automático */}
-        {fallbackWarnings.length > 0 && (
+        {/* Aviso de preenchimento automático - apenas no modo "app" */}
+        {(config.distributionMethod || 'app') === 'app' && fallbackWarnings.length > 0 && (
           <div className="mb-6 p-4 bg-yellow-900/30 border border-yellow-700 rounded-lg">
             <div className="flex items-start gap-3">
               <span className="text-2xl">⚠️</span>
