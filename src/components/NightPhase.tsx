@@ -1106,8 +1106,10 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
     // 1. Estamos no modo clássico
     // 2. onSaveState está disponível
     // 3. O classicStepIndex realmente mudou
-    // 4. Ainda não salvamos para este classicStepIndex
+    // 4. Ainda não salvamos para este classicStepIndex (ou foi resetado em advanceClassic)
     // 5. Não estamos restaurando
+    // Nota: advanceClassic() seta lastSavedStepIndexRef para o índice atual antes de avançar,
+    // então quando chegamos aqui com o novo índice, ele será diferente e poderá ser salvo
     if (isClassicMode && onSaveState && stepIndexChanged && lastSavedStepIndexRef.current !== classicStepIndex && !isRestoringRef.current) {
       lastSavedStepIndexRef.current = classicStepIndex
       console.log('[DEBUG] Salvando estado quando classicStepIndex muda:', {
@@ -1497,8 +1499,36 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
     return classicEnabledClasses.includes(cls)
   })
   const advanceClassic = () => {
-    setClassicStepIndex(prev => Math.min(prev + 1, classicStepsOrdered.length))
-    // O useEffect vai detectar a mudança e salvar o estado automaticamente
+    const isClassicMode = gameState?.config.gameMode === 'classic'
+    const nextIndex = Math.min(classicStepIndex + 1, classicStepsOrdered.length)
+    
+    // Salvar o estado do passo atual ANTES de avançar
+    // Isso garante que o estado seja salvo corretamente, especialmente após restaurar
+    if (isClassicMode && onSaveState && lastSavedStepIndexRef.current !== classicStepIndex && !isRestoringRef.current) {
+      lastSavedStepIndexRef.current = classicStepIndex
+      console.log('[DEBUG] Salvando estado em advanceClassic antes de avançar:', {
+        currentStepIndex: classicStepIndex,
+        nextStepIndex: nextIndex,
+        actionsCount: actions.length
+      })
+      onSaveState({
+        nightPhase: {
+          currentStep,
+          actions: [...actions],
+          currentPlayerIndex,
+          playerActionsStartIndex,
+          selectedTarget,
+          usedAbilities,
+          investigationResults,
+          updatedWitchPotions,
+          silencedThisNight,
+          classicStepIndex
+        }
+      })
+    }
+    
+    // Agora avançar para o próximo passo
+    setClassicStepIndex(nextIndex)
   }
 
   const renderClassicStep = () => {
