@@ -7,7 +7,7 @@ interface InitialActionsProps {
   players: Player[]
   gameMode?: 'classic' | 'sapatinho'
   onActionsComplete: (updatedPlayers: Player[]) => void
-  onSaveState?: () => void
+  onSaveState: (options: { description: string; componentState?: any }) => void;
 }
 
 export default function InitialActions({ players, gameMode, onActionsComplete, onSaveState }: InitialActionsProps) {
@@ -33,11 +33,9 @@ export default function InitialActions({ players, gameMode, onActionsComplete, o
   const [copiedPlayerId, setCopiedPlayerId] = useState<string | null>(null)
 
   const handleOccultAction = () => {
-    if (!occultPlayer || !selectedTarget) return
-
     // Salvar estado antes da ação (modo clássico)
     if (gameMode === 'classic' && onSaveState) {
-      onSaveState()
+      onSaveState({ description: 'Ação do Ocultista' })
     }
 
     const targetPlayer = players.find(p => p.id === selectedTarget)
@@ -73,7 +71,7 @@ export default function InitialActions({ players, gameMode, onActionsComplete, o
 
     // Salvar estado antes da ação (modo clássico)
     if (gameMode === 'classic' && onSaveState) {
-      onSaveState()
+      onSaveState({ description: 'Ação do Cupido' })
     }
 
     const newPlayers = updatedPlayers.map(player => {

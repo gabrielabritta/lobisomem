@@ -21,9 +21,7 @@ interface DayPhaseProps {
   onSilverBulletShot?: (silverBulletPlayerId: string, targetId: string, trigger: 'night_death' | 'day_expulsion') => void
   onShowGameStatus?: () => void
   onGameReset?: () => void
-  onSaveState?: (componentState?: any) => void
-  onUndo?: () => void
-  canUndo?: boolean
+  onSaveState: (options: { description: string; componentState?: any }) => void;
   restoredState?: any // Estado restaurado após desfazer
 }
 
@@ -55,8 +53,6 @@ export default function DayPhase({
   onShowGameStatus,
   onGameReset,
   onSaveState,
-  onUndo,
-  canUndo,
   restoredState
 }: DayPhaseProps) {
   // Inicializar estados com valores restaurados se disponíveis
@@ -236,18 +232,22 @@ export default function DayPhase({
   const handleMayorReelectionVote = (targetId: string) => {
     // Salvar estado antes do voto (modo clássico)
     if (config.gameMode === 'classic' && onSaveState) {
+      const voterName = alivePlayers[mayorReelectionVoterIndex].name;
       // Salvar estado interno do componente junto
       onSaveState({
-        dayPhase: {
-          currentStep,
-          discussionTimeLeft,
-          currentVoterIndex,
-          votes,
-          newMayorId,
-          votingResult,
-          mayorReelectionVotes: { ...mayorReelectionVotes }, // Estado atual antes de adicionar novo voto
-          mayorReelectionVoterIndex,
-          mayorReelectionResult
+        description: `Reeleição: Voto de ${voterName}`,
+        componentState: {
+          dayPhase: {
+            currentStep,
+            discussionTimeLeft,
+            currentVoterIndex,
+            votes,
+            newMayorId,
+            votingResult,
+            mayorReelectionVotes: { ...mayorReelectionVotes }, // Estado atual antes de adicionar novo voto
+            mayorReelectionVoterIndex,
+            mayorReelectionResult
+          }
         }
       })
     }
@@ -284,16 +284,19 @@ export default function DayPhase({
     if (config.gameMode === 'classic' && onSaveState) {
       // Salvar estado interno do componente junto
       onSaveState({
-        dayPhase: {
-          currentStep,
-          discussionTimeLeft,
-          currentVoterIndex,
-          votes: { ...votes }, // Estado atual antes de adicionar novo voto
-          newMayorId,
-          votingResult,
-          mayorReelectionVotes,
-          mayorReelectionVoterIndex,
-          mayorReelectionResult
+        description: `Expulsão: Voto de ${currentVoter.name}`,
+        componentState: {
+          dayPhase: {
+            currentStep,
+            discussionTimeLeft,
+            currentVoterIndex,
+            votes: { ...votes }, // Estado atual antes de adicionar novo voto
+            newMayorId,
+            votingResult,
+            mayorReelectionVotes,
+            mayorReelectionVoterIndex,
+            mayorReelectionResult
+          }
         }
       })
     }
@@ -430,16 +433,6 @@ const handleMayorTieChoice = (expelledPlayerId: string) => {
             </div>
             {onShowGameStatus && onGameReset && (
               <div className="flex gap-3 w-full sm:w-auto justify-center">
-                {config.gameMode === 'classic' && onUndo && (
-                  <button
-                    onClick={onUndo}
-                    disabled={!canUndo}
-                    className="btn-secondary text-sm px-6 py-2 flex-1 sm:flex-initial min-w-[140px] disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Desfazer última ação"
-                  >
-                    ⏪ Desfazer
-                  </button>
-                )}
                 <button
                   onClick={onShowGameStatus}
                   className="btn-secondary text-sm px-6 py-2 flex-1 sm:flex-initial min-w-[140px]"

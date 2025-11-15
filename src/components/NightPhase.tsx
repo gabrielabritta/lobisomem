@@ -949,13 +949,11 @@ interface NightPhaseProps {
   onNightComplete: (actions: GameAction[], updatedPlayers: Player[], updatedGameState?: Partial<GameState>) => void
   onShowGameStatus?: () => void
   onGameReset?: () => void
-  onSaveState?: (componentState?: any) => void
-  onUndo?: () => void
-  canUndo?: boolean
+  onSaveState: (options: { description: string; componentState?: any }) => void;
   restoredState?: any // Estado restaurado após desfazer
 }
 
-export default function NightPhase({ players, nightNumber, gameState, onNightComplete, onShowGameStatus, onGameReset, onSaveState, onUndo, canUndo, restoredState }: NightPhaseProps) {
+export default function NightPhase({ players, nightNumber, gameState, onNightComplete, onShowGameStatus, onGameReset, onSaveState, restoredState }: NightPhaseProps) {
   // Inicializar estados com valores restaurados se disponíveis
   const [currentStep, setCurrentStep] = useState<NightStep>(restoredState?.currentStep || 'werewolves')
   const [actions, setActions] = useState<GameAction[]>(restoredState?.actions || [])
@@ -1112,23 +1110,25 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
     // então quando chegamos aqui com o novo índice, ele será diferente e poderá ser salvo
     if (isClassicMode && onSaveState && stepIndexChanged && lastSavedStepIndexRef.current !== classicStepIndex && !isRestoringRef.current) {
       lastSavedStepIndexRef.current = classicStepIndex
-      console.log('[DEBUG] Salvando estado quando classicStepIndex muda:', {
-        classicStepIndex,
-        actionsCount: actions.length,
-        previousStepIndex: previousStepIndexRef.current
-      })
+      
+      const currentClass = classicStepsOrdered[classicStepIndex];
+      const description = currentClass ? `Noite: ${CHARACTER_NAMES[currentClass]}` : `Noite ${nightNumber}`;
+
       onSaveState({
-        nightPhase: {
-          currentStep,
-          actions: [...actions], // Estado atual antes de qualquer ação neste passo
-          currentPlayerIndex,
-          playerActionsStartIndex,
-          selectedTarget,
-          usedAbilities,
-          investigationResults,
-          updatedWitchPotions,
-          silencedThisNight,
-          classicStepIndex
+        description: description,
+        componentState: {
+            nightPhase: {
+            currentStep,
+            actions: [...actions], // Estado atual antes de qualquer ação neste passo
+            currentPlayerIndex,
+            playerActionsStartIndex,
+            selectedTarget,
+            usedAbilities,
+            investigationResults,
+            updatedWitchPotions,
+            silencedThisNight,
+            classicStepIndex
+            }
         }
       })
     }
@@ -1506,23 +1506,25 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
     // Isso garante que o estado seja salvo corretamente, especialmente após restaurar
     if (isClassicMode && onSaveState && lastSavedStepIndexRef.current !== classicStepIndex && !isRestoringRef.current) {
       lastSavedStepIndexRef.current = classicStepIndex
-      console.log('[DEBUG] Salvando estado em advanceClassic antes de avançar:', {
-        currentStepIndex: classicStepIndex,
-        nextStepIndex: nextIndex,
-        actionsCount: actions.length
-      })
+      
+      const currentClass = classicStepsOrdered[classicStepIndex];
+      const description = currentClass ? `Noite: Ação de ${CHARACTER_NAMES[currentClass]}` : `Noite ${nightNumber}`;
+
       onSaveState({
-        nightPhase: {
-          currentStep,
-          actions: [...actions],
-          currentPlayerIndex,
-          playerActionsStartIndex,
-          selectedTarget,
-          usedAbilities,
-          investigationResults,
-          updatedWitchPotions,
-          silencedThisNight,
-          classicStepIndex
+        description: description,
+        componentState: {
+            nightPhase: {
+            currentStep,
+            actions: [...actions],
+            currentPlayerIndex,
+            playerActionsStartIndex,
+            selectedTarget,
+            usedAbilities,
+            investigationResults,
+            updatedWitchPotions,
+            silencedThisNight,
+            classicStepIndex
+            }
         }
       })
     }
@@ -1789,16 +1791,6 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
               </div>
               {onShowGameStatus && onGameReset && (
                 <div className="flex gap-3 w-full sm:w-auto justify-center">
-                  {isClassicMode && onUndo && (
-                    <button
-                      onClick={onUndo}
-                      disabled={!canUndo}
-                      className="btn-secondary text-sm px-6 py-2 flex-1 sm:flex-initial min-w-[140px] disabled:opacity-50 disabled:cursor-not-allowed"
-                      title="Desfazer última ação"
-                    >
-                      ⏪ Desfazer
-                    </button>
-                  )}
                   <button onClick={onShowGameStatus} className="btn-secondary text-sm px-6 py-2 flex-1 sm:flex-initial min-w-[140px]" title="Abrir modal com situação geral do jogo">📊 Planilha</button>
                   <button onClick={() => { if (confirm('Tem certeza que deseja iniciar uma nova partida? Todos os progressos atuais serão perdidos.')) { onGameReset && onGameReset() } }} className="btn-secondary text-sm px-6 py-2 flex-1 sm:flex-initial min-w-[140px]">🔄 Nova Partida</button>
                 </div>
@@ -1834,16 +1826,6 @@ export default function NightPhase({ players, nightNumber, gameState, onNightCom
             </div>
             {onShowGameStatus && onGameReset && (
               <div className="flex gap-3 w-full sm:w-auto justify-center">
-                {isClassicMode && onUndo && (
-                  <button
-                    onClick={onUndo}
-                    disabled={!canUndo}
-                    className="btn-secondary text-sm px-6 py-2 flex-1 sm:flex-initial min-w-[140px] disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Desfazer última ação"
-                  >
-                    ⏪ Desfazer
-                  </button>
-                )}
                 <button
                   onClick={onShowGameStatus}
                   className="btn-secondary text-sm px-6 py-2 flex-1 sm:flex-initial min-w-[140px]"

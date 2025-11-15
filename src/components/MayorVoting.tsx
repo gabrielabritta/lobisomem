@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { Player, GameConfig } from '../types/game'
 import { processVotes } from '../utils/gameUtils'
 
@@ -6,14 +6,23 @@ interface MayorVotingProps {
   players: Player[]
   config: GameConfig
   onVotingComplete: (mayorId: string) => void
-  onSaveState?: () => void
+  onSaveState: (options: { description: string; componentState?: any }) => void
+  restoredState?: any
 }
 
-export default function MayorVoting({ players, config, onVotingComplete, onSaveState }: MayorVotingProps) {
-  const [currentVoterIndex, setCurrentVoterIndex] = useState(0)
-  const [votes, setVotes] = useState<{ [playerId: string]: string }>({})
+export default function MayorVoting({ players, config, onVotingComplete, onSaveState, restoredState }: MayorVotingProps) {
+  const [currentVoterIndex, setCurrentVoterIndex] = useState(restoredState?.currentVoterIndex || 0)
+  const [votes, setVotes] = useState(restoredState?.votes || {})
   const [showVotes, setShowVotes] = useState(!config.mayorVotingAnonymous)
-  const [votingResult, setVotingResult] = useState<{ winner: string | null, tied: boolean, tiedPlayers: string[] } | null>(null)
+  const [votingResult, setVotingResult] = useState(restoredState?.votingResult || null)
+
+  useEffect(() => {
+    if (restoredState) {
+      setCurrentVoterIndex(restoredState.currentVoterIndex || 0)
+      setVotes(restoredState.votes || {})
+      setVotingResult(restoredState.votingResult || null)
+    }
+  }, [restoredState])
 
   const alivePlayers = players.filter(p => p.isAlive)
   const currentVoter = alivePlayers[currentVoterIndex]
@@ -61,12 +70,22 @@ export default function MayorVoting({ players, config, onVotingComplete, onSaveS
   }
 
   const handleVote = (targetId: string) => {
-    // Salvar estado antes do voto (modo clássico)
+    const newVotes = { ...votes, [currentVoter.id]: targetId }
+    
+    // Salvar estado ANTES da ação (modo clássico)
     if (config.gameMode === 'classic' && onSaveState) {
-      onSaveState()
+      onSaveState({
+        description: `Voto Prefeito: ${currentVoter.name}`,
+        componentState: {
+          mayorVoting: {
+            currentVoterIndex,
+            votes,
+            votingResult,
+          },
+        },
+      })
     }
 
-    const newVotes = { ...votes, [currentVoter.id]: targetId }
     setVotes(newVotes)
 
     if (currentVoterIndex < alivePlayers.length - 1) {
